@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Docent for YouTube",
+  "version": "0.1.0",
+  "description": "Shows the transcript, live chat, comments or recommendations beside YouTube videos, with an icon rail and fewer buttons.",
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/*"],
+      "js": ["docent.js"],
+      "css": ["docent.css"],
+      "world": "MAIN",
+      "run_at": "document_start"
+    }
+  ]
+}
