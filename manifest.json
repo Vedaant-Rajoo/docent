@@ -2,8 +2,17 @@
   "manifest_version": 3,
   "name": "Docent for YouTube",
   "version": "0.1.0",
-  "description": "Shows the transcript, live chat, comments or recommendations beside YouTube videos, with an icon rail and fewer buttons.",
+  "description": "A minimal YouTube layout with an icon rail and native panels that open when you need them.",
+  "permissions": ["storage"],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_title": "Disable Docent" },
+  "options_ui": { "page": "settings.html", "open_in_tab": true },
   "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/*"],
+      "js": ["bridge.js"],
+      "run_at": "document_start"
+    },
     {
       "matches": ["https://www.youtube.com/*"],
       "js": ["docent.js"],

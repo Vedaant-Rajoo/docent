@@ -1,5 +1,5 @@
 /* Docent restyles YouTube's own nodes only while <html> has data-docent, which docent.js
-   sets on watch pages. The !important flags are there to beat YouTube's own styles. */
+   sets while enabled. The !important flags are there to beat YouTube's own styles. */
 html[data-docent] {
   --docent-bg: #0c0c0e;
   --docent-card: #161618;
@@ -9,61 +9,123 @@ html[data-docent] {
 
   &, & body, & ytd-app, & ytd-masthead, & ytd-masthead #background { background: var(--docent-bg) !important; }
   & #cinematics, & #cinematics-container { display: none !important; }
+  & :is(ytd-guide, ytd-mini-guide) { display: none !important; }
+  & ytd-app { --app-drawer-width: 64px; --ytd-mini-guide-width: 64px; --ytd-persistent-guide-width: 64px; }
 
   /* Header: the search box alone in the middle, plus Docent's buttons */
-  & ytd-masthead :is(#start, #end, #voice-search-button, .ytSearchboxComponentSearchButton) { display: none !important; }
+  & ytd-masthead :is(#start, #end, #voice-search-button, .ytSearchboxComponentSearchButton, .ytSearchboxComponentClearButtonWrapper) { display: none !important; }
+  /* YouTube's clear button sat where the ⌘K hint goes. Without it, the padding keeps long queries clear of the hint. */
+  & yt-searchbox input.ytSearchboxComponentInput { padding-right: 40px !important; }
   & ytd-masthead #container { justify-content: center !important; }
-  /* The max-width keeps the search box clear of the panel switcher in narrow windows. */
-  & ytd-masthead #center { flex: 0 1 520px !important; max-width: calc(100vw - 560px) !important; margin: 0 !important; }
+  /* Keep search clear of the header controls. */
+  & ytd-masthead #center { flex: 0 1 520px !important; max-width: calc(100vw - 320px) !important; margin: 0 !important; }
   & ytd-masthead .ytSearchboxComponentInputBox { border-radius: 10px !important; background: #18181b !important; border-color: var(--docent-line) !important; }
   & yt-searchbox { position: relative; }
   & #docent-kbd { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font: 500 11px/1 Roboto, Arial; color: var(--docent-muted); border: 1px solid var(--docent-line); border-radius: 6px; padding: 4px 6px; pointer-events: none; }
-  & #docent-nav, & #docent-panels, & #docent-reload { position: fixed; top: 10px; z-index: 2100; display: flex; gap: 4px; }
+  & #docent-nav, & #docent-reload { position: fixed; top: 10px; z-index: 2100; display: flex; gap: 4px; }
   & #docent-nav { left: 80px; }
-  & #docent-panels { right: 64px; }
   & #docent-reload { right: 16px; }
-  & .docent-icon { all: unset; cursor: pointer; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 10px; color: #d6d6da; }
-  & .docent-icon:hover, & .docent-icon[aria-pressed=true] { background: var(--docent-fill); }
-  & .docent-icon[aria-pressed=true] { color: #fff; }
+  & #docent-recommended { position: fixed; top: 10px; right: 64px; z-index: 2100; }
+  /* Keep YouTube's menu handlers, notification count and account eligibility. */
+  &[data-docent-home] ytd-masthead {
+    & #center { max-width: calc(100vw - 360px) !important; }
+    & #end { display: flex !important; position: fixed; top: 10px; right: 64px; height: 36px; min-width: 0 !important; padding: 0 !important; z-index: 2100; }
+    & #end > :not(#buttons), & #buttons > :not(ytd-notification-topbar-button-renderer, :has([aria-label=Create])) { display: none !important; }
+    & #buttons { display: flex; gap: 4px; margin: 0 !important; }
+    & #buttons > :is(ytd-notification-topbar-button-renderer, :has([aria-label=Create])) { width: 36px !important; height: 36px !important; margin: 0 !important; padding: 0 !important; }
+    & #end :is(yt-icon-button, button) { width: 36px !important; height: 36px !important; }
+    & #end button { box-sizing: border-box; display: grid !important; place-items: center; border: 0 !important; border-radius: 10px !important; padding: 8px !important; background: transparent !important; color: #d6d6da !important; cursor: pointer; }
+    & #end button:hover { background: var(--docent-fill) !important; }
+    & #end button:focus-visible { outline: 2px solid #a9b8e8; outline-offset: 2px; }
+    & #end yt-icon { width: 20px !important; height: 20px !important; }
+    /* ponytail: Create uses YouTube's English label; use a data marker when supporting localized headers. */
+    & button[aria-label=Create] > :not(yt-touch-feedback-shape, yt-interaction) { display: none !important; }
+    & button[aria-label=Create]::before { content: '+'; font: 300 26px/20px Arial, sans-serif; }
+  }
+  & .docent-icon { all: unset; flex: none; cursor: pointer; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 10px; color: #d6d6da; }
+  & .docent-icon:hover { background: var(--docent-fill); }
+  & #docent-recommended[aria-pressed=true] { background: #ededee; color: #141416; }
+  & .docent-icon:focus-visible { outline: 2px solid #a9b8e8; outline-offset: 2px; }
 
-  /* Icon rail: YouTube's logo in the corner above it, the library links, then the subscriptions */
+  /* Icon rail: YouTube's logo in the corner above it, the library links, then the subscriptions,
+     which scroll on their own below the links */
   & #docent-logo { position: fixed; top: 10px; left: 14px; z-index: 2100; width: 36px; height: 36px; display: grid; place-items: center; }
-  & #docent-rail { position: fixed; top: 56px; left: 0; bottom: 0; width: 64px; z-index: 2050; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 0; background: var(--docent-bg); overflow-y: auto; scrollbar-width: none; }
-  & #docent-subscriptions { display: flex; flex-direction: column; gap: 6px; padding-top: 6px; border-top: 1px solid var(--docent-line); }
+  & #docent-rail { position: fixed; top: 56px; left: 0; bottom: 0; width: 64px; z-index: 2050; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 0; background: var(--docent-bg); box-sizing: border-box; }
+  & #docent-subscriptions { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; display: flex; flex-direction: column; gap: 6px; padding-top: 6px; border-top: 1px solid var(--docent-line); }
+  & #docent-subscriptions:empty { border-top: 0; }
   & #docent-subscriptions img { width: 26px; height: 26px; border-radius: 50%; }
   & .docent-new { position: relative; }
   & .docent-new::after { content: ''; position: absolute; top: 3px; right: 3px; width: 7px; height: 7px; border-radius: 50%; background: #3ea6ff; }
   & ytd-page-manager#page-manager { margin-left: 64px !important; }
 
-  /* Right column: one full-height card showing the panel docent.js names in <html data-docent-panel>.
-     The switcher's theater mode button hides the column so the video can take the full width. */
-  & ytd-watch-flexy #secondary-inner { display: flex; flex-direction: column; background: var(--docent-card); border: 1px solid var(--docent-line); border-radius: 16px; overflow: hidden; }
-  & ytd-watch-flexy[theater] #secondary { display: none !important; }
+  /* Home categories keep YouTube's scrolling and selection behavior. */
+  & ytd-browse[page-subtype=home] ytd-feed-filter-chip-bar-renderer {
+    background: var(--docent-bg) !important;
+    & #chips-content { background: var(--docent-bg) !important; }
+    & yt-chip-cloud-chip-renderer { margin-right: 8px !important; }
+    & :is(yt-chip-cloud-chip-renderer:not(:has(chip-shape)), .ytChipShapeInactive, .ytChipShapeInactiveRedesign, .ytChipShapeActive, .ytChipShapeActiveRedesign) {
+      box-sizing: border-box; height: 32px !important; padding: 0 14px !important; border: 1px solid rgba(255, 255, 255, .1) !important;
+      border-radius: 999px !important; background: transparent !important; color: #b3b3ba !important; font: 500 13px/30px Roboto, Arial, sans-serif !important;
+    }
+    & .ytChipShapeText { font: inherit !important; }
+    & :is(yt-chip-cloud-chip-renderer:not([selected]):not(:has(chip-shape)), .ytChipShapeInactive, .ytChipShapeInactiveRedesign):hover { background: var(--docent-fill) !important; color: #f1f1f1 !important; }
+    & :is(yt-chip-cloud-chip-renderer[selected]:not(:has(chip-shape)), .ytChipShapeActive, .ytChipShapeActiveRedesign) { background: #ededee !important; border-color: #ededee !important; color: #141416 !important; }
+    & yt-chip-cloud-chip-renderer:is(:focus-visible, :has(:focus-visible)) { outline: 2px solid #ededee; outline-offset: 3px; border-radius: 999px; }
+    & :is(#left-arrow, #right-arrow) { background: var(--docent-bg) !important; }
+    & #left-arrow::after { background: linear-gradient(to right, var(--docent-bg), transparent) !important; }
+    & #right-arrow::before { background: linear-gradient(to left, var(--docent-bg), transparent) !important; }
+  }
+
+  /* The selected component uses the column. Ordinary videos start without one. */
+  & ytd-watch-flexy { --ytd-watch-flexy-sidebar-width: 360px !important; }
+  &[data-docent-panel=none] ytd-watch-flexy {
+    --ytd-watch-flexy-sidebar-width: 0px !important; --ytd-watch-flexy-sidebar-min-width: 0px !important;
+    & #primary { flex: 1 !important; min-width: 0 !important; max-width: none !important; }
+    & #secondary { display: none !important; }
+  }
+  & ytd-watch-flexy #secondary-inner { box-sizing: border-box; display: flex; flex-direction: column; background: var(--docent-card); border: 1px solid var(--docent-line); border-radius: 16px; overflow: hidden; }
+  & ytd-watch-flexy[theater] :is(#secondary, #panels, #chat-container) { display: none !important; }
+  /* At narrow widths YouTube moves panels and chat below the player. Bound those too. */
+  & ytd-watch-flexy #primary :is(#panels, #chat-container) { box-sizing: border-box; display: flex; flex-direction: column; min-height: 0; height: calc(100vh - 84px); max-height: calc(100vh - 84px); background: var(--docent-card); border: 1px solid var(--docent-line); border-radius: 16px; overflow: hidden; }
+  & ytd-watch-flexy #primary #chat-container:has(ytd-live-chat-frame[collapsed]) { height: auto; }
   /* YouTube is testing a layout (ytd-watch-flexy[using-fixed-panel]) that already pins the panels
      to the right edge. Only the older layout needs Docent to make the column sticky. */
   & ytd-watch-flexy:not([using-fixed-panel]) #secondary {
     position: sticky !important; top: 68px; align-self: flex-start; height: calc(100vh - 84px); padding-top: 0 !important;
     & #secondary-inner { height: 100%; }
   }
-  & #secondary :is(#panels, #chat-container, #related) { flex: 1; min-height: 0; }
+  & #secondary :is(#panels, #chat-container, #playlist, #related) { flex: 1; min-height: 0; }
   & #secondary :is(#panels, #chat-container) { display: flex; flex-direction: column; }
   & #secondary #related { overflow-y: auto; scrollbar-width: thin; padding: 12px; }
-  &:not([data-docent-panel=transcript]) :is(#docent-search, #docent-captions),
-  &:not([data-docent-panel=transcript], [data-docent-panel=comments]) #secondary #panels,
-  &:not([data-docent-panel=chat]) #secondary #chat-container,
-  &:not([data-docent-panel=related]) #secondary :is(#playlist, #related, yt-chip-cloud-renderer),
-  &[data-docent-panel=transcript] #panels > [target-id=engagement-panel-comments-section],
-  &[data-docent-panel=comments] #panels > :not([target-id=engagement-panel-comments-section]),
-  &[data-docent-panel=comments] #primary ytd-comments#comments { display: none !important; }
-  & :is(#docent-search, #docent-captions) { order: -1; }
+  & #secondary #playlist { margin: 0 !important; height: 100% !important; max-height: none !important; }
+  &[data-docent-panel=chat] #secondary:has(ytd-live-chat-frame[collapsed]),
+  &[data-docent-panel=playlist] #secondary:has(#playlist[collapsed]) { height: auto !important; }
+  /* YouTube is testing a chip redesign (outlined chips, a faint fill on the selected one) that barely
+     marks the selection on the card, so chips in the column get one look whichever design is served. */
+  & #secondary :is(.ytChipShapeInactive, .ytChipShapeInactiveRedesign) { border: 0 !important; background: var(--docent-fill) !important; color: #d6d6da !important; }
+  & #secondary :is(.ytChipShapeInactive, .ytChipShapeInactiveRedesign):hover { background: rgba(255, 255, 255, .14) !important; }
+  & #secondary :is(.ytChipShapeActive, .ytChipShapeActiveRedesign) { border: 0 !important; background: #f1f1f1 !important; color: #0c0c0e !important; }
+  & #secondary-inner > :not(#panels, #chat-container, #playlist, #related),
+  &:not([data-docent-panel=native]) ytd-watch-flexy #panels,
+  &:not([data-docent-panel=chat]) ytd-watch-flexy #chat-container,
+  &:not([data-docent-panel=playlist]) ytd-watch-flexy #playlist,
+  &:not([data-docent-panel=related]) ytd-watch-flexy #related,
+  & #panels > :not([data-docent-native]),
+  &:has(#panels > [data-docent-native][target-id=engagement-panel-comments-section]) #primary ytd-comments#comments { display: none !important; }
   & ytd-live-chat-frame#chat { flex: 1; height: auto !important; min-height: 0 !important; margin: 0 !important; border: 0 !important; border-radius: 0 !important; }
   & #panels ytd-engagement-panel-section-list-renderer[visibility=ENGAGEMENT_PANEL_VISIBILITY_EXPANDED] { flex: 1; min-height: 0; height: auto !important; max-height: none !important; margin: 0 !important; border: 0 !important; border-radius: 0 !important; background: transparent !important; }
-  /* Comments keep their header for the sort menu. No panel gets a close button, since the switcher replaces it. */
-  & #panels :is(ytd-engagement-panel-section-list-renderer:not([target-id=engagement-panel-comments-section]) #header, yt-search-input-view-model, #visibility-button) { display: none !important; }
-  & [data-docent-miss] { display: none !important; }
-  & #docent-search { padding: 12px 12px 4px; }
-  & #docent-search input { box-sizing: border-box; width: 100%; height: 34px; border-radius: 9px; border: 1px solid var(--docent-line); background: #1d1d20; color: #eee; padding: 0 10px; font: 13px Roboto, Arial; outline: none; }
-  & #docent-captions { font: 500 10px/1 Roboto, Arial; color: var(--docent-muted); padding: 6px 14px 2px; letter-spacing: .02em; }
+  & #docent-related-header { position: sticky; top: -12px; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 4px; background: var(--docent-card); }
+  & #docent-related-header h2 { margin: 0; color: #eee; font: 500 14px/1.5 Roboto, Arial, sans-serif; }
+  & #docent-related-header button, & .docent-menu-item { border: 0; background: transparent; color: #eee; font: 14px/1.5 Roboto, Arial, sans-serif; cursor: pointer; }
+  & #docent-related-header button { padding: 6px; border-radius: 6px; }
+  & .docent-menu-item { display: block; width: 100%; padding: 12px 16px; text-align: left; }
+  & .docent-menu-item:hover, & #docent-related-header button:hover { background: var(--docent-fill); }
+  & :is(.docent-menu-item, #docent-related-header button):focus-visible { outline: 2px solid #a9b8e8; outline-offset: -2px; }
+  @media (max-width: 1000px) {
+    & ytd-watch-flexy #columns { display: flex !important; flex-direction: column !important; }
+    & ytd-watch-flexy #primary { box-sizing: border-box; width: calc(100% - 32px) !important; min-width: 0 !important; max-width: none !important; margin: 0 16px !important; padding: 0 !important; }
+    & ytd-watch-flexy #secondary { position: static !important; width: 100% !important; min-width: 0 !important; padding: 16px 0 0 !important; }
+  }
 
   /* Transcript rows */
   & #panels transcript-segment-view-model { display: flex !important; align-items: baseline; gap: 12px; padding: 6px 8px; border-radius: 8px; font-size: 13px !important; font-weight: 400 !important; line-height: 20px !important; color: #c9c9ce; }
@@ -81,7 +143,6 @@ html[data-docent] {
 
   /* Player: rounded corners, fewer buttons, and the big play button whenever the video is paused */
   & ytd-player#ytd-player, & #ytd-player #container { border-radius: 16px !important; }
-  & :is(.ytp-size-button, .ytp-autonav-toggle, .ytp-settings-button) { display: none !important; }
   & :is(.ytp-next-button, .ytp-pip-button) { display: block !important; }
   & .html5-video-player.paused-mode:not(.ad-showing) .ytp-cued-thumbnail-overlay { display: block !important; background: none !important; }
   & .html5-video-player.paused-mode .ytp-cued-thumbnail-overlay-image { display: none !important; }
@@ -93,10 +154,20 @@ html[data-docent] {
      Download into the overflow menu when the row wraps or loses room, so Docent only hides buttons here. */
   & ytd-watch-metadata :is(dislike-button-view-model, #sponsor-button) { display: none !important; }
   & ytd-watch-metadata #actions yt-button-view-model:has(button[aria-label=Clip], button[aria-label=Thanks]) { display: none !important; }
-  & ytd-watch-metadata #actions ytd-menu-renderer > :is(yt-button-shape#button-shape, yt-icon-button#button) { visibility: hidden !important; width: 0 !important; min-width: 0 !important; margin: 0 !important; overflow: hidden !important; }
   & ytd-watch-metadata like-button-view-model button { border-radius: 999px !important; }
+  & ytd-watch-metadata like-button-view-model button[aria-pressed=true] { color: #3ea6ff !important; background: rgba(62, 166, 255, .14) !important; }
 
   /* Title and description */
   & ytd-watch-metadata #title h1 { font-size: 20px !important; }
   & ytd-watch-metadata #description { background: var(--docent-card) !important; border: 1px solid var(--docent-line); border-radius: 14px !important; }
+
+  /* Native fullscreen must not retain the rail's inset, fixed header controls or rounded corners.
+     YouTube also uses [fullscreen] during the transition into and out of browser fullscreen. */
+  &:has(:fullscreen, ytd-watch-flexy[fullscreen]) {
+    & ytd-app { --app-drawer-width: 0px; --ytd-mini-guide-width: 0px; --ytd-persistent-guide-width: 0px; }
+    & :is(#docent-logo, #docent-rail, #docent-nav, #docent-reload, #docent-recommended, ytd-masthead),
+    & ytd-watch-flexy :is(#secondary, #below, #panels, #chat-container) { display: none !important; }
+    & ytd-page-manager#page-manager { margin: 0 !important; }
+    & ytd-player#ytd-player, & #ytd-player #container, & #movie_player { border-radius: 0 !important; }
+  }
 }

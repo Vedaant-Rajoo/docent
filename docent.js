@@ -1,12 +1,12 @@
-// Docent reworks YouTube's watch page around the video and its transcript.
+// Docent adds a minimal shell across YouTube and reworks the watch page around its video.
 // docent.css restyles YouTube's own nodes while <html> has data-docent. This file sets that
-// attribute on watch pages and adds Docent's own nodes. YouTube re-renders and re-measures
+// attribute while enabled and adds Docent's own nodes. YouTube re-renders and re-measures
 // its nodes, so Docent hides and restyles them but never moves them.
 //
 // This file runs in the page's main world because the player API (getPlayerResponse,
 // setPlaybackRate) lives there. YouTube enforces Trusted Types in that world, so innerHTML
 // throws; build nodes with createElement and textContent.
-// ponytail: the main world has no chrome.* APIs. Add an isolated-world script when Docent needs storage.
+// bridge.js handles storage in the isolated world.
 
 const $ = (selector, root = document) => root.querySelector(selector);
 
@@ -41,11 +41,8 @@ const ICONS = {
   back: 'M15 5l-7 7 7 7',
   forward: 'M9 5l7 7-7 7',
   reload: 'M20 12a8 8 0 1 1-2.3-5.7L20 8M20 3v5h-5',
-  transcript: 'M5 6h14M5 10h14M5 14h14M5 18h8',
-  chat: 'M4 5h16v11h-9l-5 4v-4H4zM8 9h8M8 12h5',
-  comments: 'M20 11.5a8 8 0 0 1-11.6 7.1L4 20l1.4-4.4A8 8 0 1 1 20 11.5z',
   related: 'M3 6h7v5H3zM13 7h8M13 10h5M3 14h7v5H3zM13 15h8M13 18h5',
-  theater: 'M3 7h18v10H3z',
+  settings: 'M9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6',
 };
 
 const iconButton = (name, label, onclick) => el('button', { className: 'docent-icon', title: label, ariaLabel: label, onclick }, icon(ICONS[name]));
@@ -53,11 +50,9 @@ const iconLink = (name, label, href) => el('a', { className: 'docent-icon', titl
 
 const RATES = [1, 1.25, 1.5, 2];
 
-// The panels the right column can show. The header has a button for each one the video offers,
-// plus a theater mode button that hides the column.
-const PANELS = { transcript: 'Transcript', chat: 'Live chat', comments: 'Comments', related: 'Recommended' };
-// The panel picked last. Later videos open it too when they offer it.
-let picked;
+let settings;
+let setupTimer;
+let restoreWatch = () => {};
 
 // YouTube's guide, fetched once per page load for the subscriptions in the rail.
 let guide;
@@ -65,15 +60,8 @@ let guide;
 // YouTube serves two transcript layouts: transcript-segment-view-model rows and the older
 // ytd-transcript-segment-renderer rows. Find the open panel by its rows, because its
 // target-id is sometimes missing.
-const transcriptPanel = () => [...document.querySelectorAll('#panels ytd-engagement-panel-section-list-renderer[visibility=ENGAGEMENT_PANEL_VISIBILITY_EXPANDED]')]
+const transcriptPanel = () => [...document.querySelectorAll('#panels ytd-engagement-panel-section-list-renderer[data-docent-native]')]
   .find(panel => panel.querySelector('transcript-segment-view-model, ytd-transcript-segment-renderer'));
-
-// Presses the header button for what the right column shows. Theater mode hides the column.
-const press = () => {
-  const shown = $('ytd-watch-flexy[theater]') ? 'theater' : document.documentElement.dataset.docentPanel;
-  document.querySelectorAll('#docent-panels button').forEach(button => button.ariaPressed = button.name === shown);
-};
-const theater = new MutationObserver(press);
 
 // Links to the channels in the guide's subscriptions section, which YouTube orders by recent
 // activity. Channels with new videos get a dot. The section nests the channels past the first
@@ -110,96 +98,191 @@ const fillQuality = () => {
 const listening = new WeakSet();
 
 function setup(tries = 0) {
+  clearTimeout(setupTimer);
+  restoreWatch();
+  restoreWatch = () => {};
+  const root = document.documentElement;
   const onWatchPage = location.pathname === '/watch';
+  // Preserve the existing dark-theme requirement: native light text colors do not suit this layout.
+  const on = Boolean(settings?.enabled && root.hasAttribute('dark'));
+  const wasOn = root.hasAttribute('data-docent');
+  document.querySelectorAll('[data-docent-node]').forEach(node => node.remove());
+  root.toggleAttribute('data-docent', on);
+  root.toggleAttribute('data-docent-watch', on && onWatchPage);
+  root.toggleAttribute('data-docent-home', on && location.pathname === '/');
+  delete root.dataset.docentPanel;
+  if (!on) {
+    if (wasOn) dispatchEvent(new Event('resize'));
+    return;
+  }
   // yt-navigate-finish fires before the watch page shows the new video. On first load the
   // description isn't rendered yet, and after in-app navigation the previous video's transcript
   // button is still there. ytd-watch-flexy's video-id switches once the new metadata is in.
-  if (onWatchPage && tries < 100 && $('ytd-watch-flexy')?.getAttribute('video-id') !== new URLSearchParams(location.search).get('v')) {
-    setTimeout(setup, 50, tries + 1);
+  if (tries < 100 && (!document.body || !$('ytd-masthead') || (onWatchPage && $('ytd-watch-flexy')?.getAttribute('video-id') !== new URLSearchParams(location.search).get('v')))) {
+    setupTimer = setTimeout(setup, 50, tries + 1);
     return;
   }
-  // Docent's colors assume YouTube's dark theme. In the light theme YouTube's dark text would
-  // land on Docent's dark backgrounds, so Docent stays off there.
-  const on = onWatchPage && document.documentElement.hasAttribute('dark');
-  document.querySelectorAll('[data-docent-node]').forEach(node => node.remove());
-  document.documentElement.toggleAttribute('data-docent', on);
-  if (!on) return;
+  if (!document.body) return;
 
   // Header
   document.body.append(
     el('div', { id: 'docent-nav' }, iconButton('back', 'Back', () => history.back()), iconButton('forward', 'Forward', () => history.forward())),
     el('div', { id: 'docent-reload' }, iconButton('reload', 'Reload', () => location.reload())),
   );
-  $('yt-searchbox')?.append(el('kbd', { id: 'docent-kbd', textContent: '⌘K' }));
+  $('yt-searchbox')?.append(el('kbd', { id: 'docent-kbd', textContent: /Mac/.test(navigator.platform) ? '⌘K' : 'Ctrl K' }));
 
   // Icon rail: YouTube's logo on top, then the library, then the subscriptions once the guide loads
+  const channels = el('div', { id: 'docent-subscriptions', role: 'group', ariaLabel: 'Subscriptions' });
   const rail = el('nav', { id: 'docent-rail', ariaLabel: 'Library' },
     iconLink('home', 'Home', '/'),
     iconLink('watchLater', 'Watch later', '/playlist?list=WL'),
     iconLink('playlists', 'Playlists', '/feed/playlists'),
     iconLink('history', 'History', '/feed/history'),
     iconLink('liked', 'Liked videos', '/playlist?list=LL'),
+    channels,
+    Object.assign(iconButton('settings', 'Docent settings', () => document.dispatchEvent(new Event('docent-open-settings'))), { id: 'docent-settings' }),
   );
   document.body.append(el('a', { id: 'docent-logo', title: 'YouTube', ariaLabel: 'YouTube', href: '/' }, logo()), rail);
   // ponytail: one fetch per page load, so channels subscribed to since then show after a reload.
   guide ??= $('ytd-app')?.guideService?.fetchGuideData?.().catch(() => null);
   guide?.then(data => {
-    const channels = subscriptions(data);
-    if (channels.length) rail.append(el('div', { id: 'docent-subscriptions', role: 'group', ariaLabel: 'Subscriptions' }, ...channels));
+    if (rail.isConnected) channels.replaceChildren(...subscriptions(data));
   });
-
-  // Right column: a search box and the caption language above YouTube's transcript panel, for
-  // videos that offer a transcript.
-  const transcriptButton = $('ytd-watch-metadata ytd-video-description-transcript-section-renderer button');
-  const player = $('#movie_player');
-  if (transcriptButton) {
-    const filter = el('input', { type: 'search', placeholder: 'Search transcript', ariaLabel: 'Search transcript' });
-    filter.oninput = () => {
-      const term = filter.value.trim().toLowerCase();
-      transcriptPanel()?.querySelectorAll('macro-markers-panel-item-view-model, ytd-transcript-segment-renderer').forEach(row => {
-        const text = row.querySelector('transcript-segment-view-model .ytAttributedStringHost, .segment-text')?.textContent.toLowerCase();
-        row.toggleAttribute('data-docent-miss', Boolean(term) && !text?.includes(term));
-      });
-    };
-    // Label the caption track YouTube picks by default for this video.
-    const captions = player?.getPlayerResponse?.()?.captions?.playerCaptionsTracklistRenderer;
-    const track = captions?.captionTracks?.[captions.audioTracks?.[captions.defaultAudioTrackIndex ?? 0]?.defaultCaptionTrackIndex ?? 0];
-    $('ytd-watch-flexy #secondary-inner')?.prepend(
-      el('div', { id: 'docent-search' }, filter),
-      el('div', { id: 'docent-captions', textContent: `Captions · ${track?.languageCode ?? 'none'}${track?.kind === 'asr' ? ' (auto)' : ''}` }),
-    );
+  if (!onWatchPage) {
+    dispatchEvent(new Event('resize'));
+    return;
   }
 
-  // The header switches the right column between panels. docent.css shows the one named in
-  // <html data-docent-panel> and hides the column in theater mode. Each panel the video offers
-  // maps to what opens it: the transcript button, the "Show chat replay" button of a stream's
-  // recording, or the comments engagement panel that YouTube leaves hidden in this layout.
-  // A chat frame holding a message renderer only says that chat or its replay is turned off.
-  const comments = $('#panels ytd-engagement-panel-section-list-renderer[target-id=engagement-panel-comments-section]');
-  const open = {
-    transcript: transcriptButton && (() => transcriptPanel() || transcriptButton.click()),
-    chat: $('#chat-container ytd-live-chat-frame:not(:has(ytd-message-renderer))') && (() => $('#chat-container ytd-live-chat-frame[collapsed] #show-hide-button button')?.click()),
-    comments: comments && (() => comments.setAttribute('visibility', 'ENGAGEMENT_PANEL_VISIBILITY_EXPANDED')),
-    related: () => {},
+  const watch = $('ytd-watch-flexy');
+  if (!watch) return;
+  const player = $('#movie_player');
+  const panels = $('#panels', watch);
+  const videoId = watch.getAttribute('video-id');
+  let activePanel, opener, lastTrigger, preferredContext, fullscreenPanel, menuRequested = false;
+  const contextPanel = () => {
+    const chat = $('#chat-container ytd-live-chat-frame:not(:has(ytd-message-renderer))', watch);
+    const playlist = $('#playlist:not([hidden])', watch);
+    if (playlist && preferredContext === 'playlist') return 'playlist';
+    if (chat && (preferredContext === 'chat' || !chat.hasAttribute('collapsed'))) return 'chat';
+    if (playlist) return 'playlist';
+    return chat ? 'chat' : 'none';
   };
-  const show = name => {
-    document.documentElement.dataset.docentPanel = name;
-    open[name]();
-    press();
+  // CSS selects one native component. Do not close, move, or rebuild it: drafts and reading
+  // positions belong to YouTube. Ordinary videos have no column until an action opens it.
+  const show = (name, panel) => {
+    if (name === 'chat' || name === 'playlist') preferredContext = name;
+    activePanel?.removeAttribute('data-docent-native');
+    activePanel = panel;
+    panel?.setAttribute('data-docent-native', '');
+    recommended.ariaPressed = String(name === 'related');
+    if (root.dataset.docentPanel === name) return;
+    root.dataset.docentPanel = name;
+    dispatchEvent(new Event('resize'));
   };
-  // Theater mode is YouTube's own, so the size button (hidden by docent.css) toggles it and the
-  // t key keeps working.
-  const toggleTheater = () => $('.ytp-size-button')?.click();
-  document.body.append(el('div', { id: 'docent-panels', role: 'group', ariaLabel: 'Right column' },
-    ...Object.keys(PANELS).filter(name => open[name]).map(name => Object.assign(iconButton(name, PANELS[name], () => {
-      picked = name;
-      show(name);
-      if ($('ytd-watch-flexy[theater]')) toggleTheater();
-    }), { name })),
-    Object.assign(iconButton('theater', 'Theater mode', toggleTheater), { name: 'theater' }),
-  ));
-  show([picked, 'transcript', 'chat', 'related'].find(name => open[name]));
-  theater.observe($('ytd-watch-flexy'), { attributeFilter: ['theater'] });
+  const close = () => {
+    fullscreenPanel = undefined;
+    const focused = activePanel?.contains(document.activeElement) || $('#secondary', watch)?.contains(document.activeElement);
+    show(contextPanel());
+    const target = opener?.isConnected && opener.checkVisibility() ? opener : player;
+    if (focused || document.activeElement === document.body) target?.focus({ preventScroll: true });
+  };
+  const reveal = () => {
+    if (watch.hasAttribute('theater') && !watch.hasAttribute('fullscreen') && !document.fullscreenElement) $('.ytp-size-button')?.click();
+  };
+  const recommended = Object.assign(iconButton('related', 'Recommended videos', () => {
+    if (root.dataset.docentPanel === 'related') return close();
+    const surface = $('#related', watch);
+    if (!surface) return;
+    opener = recommended;
+    if (!$('#docent-related-header', surface)) surface.prepend(el('div', { id: 'docent-related-header' },
+      el('h2', { textContent: 'Recommended', tabIndex: -1 }),
+      el('button', { type: 'button', textContent: 'Close', ariaLabel: 'Close recommendations', onclick: close }),
+    ));
+    show('related');
+    reveal();
+    $('h2', surface)?.focus();
+  }), { id: 'docent-recommended', type: 'button', ariaControls: 'related' });
+  document.body.append(recommended);
+  const onPanelChange = event => {
+    if (watch.getAttribute('video-id') !== videoId || event.detail?.actionName !== 'yt-engagement-panel-visible-changed' || !Array.isArray(event.detail.args)) return;
+    const visibility = event.detail.args[1];
+    const panel = event.target.closest?.('ytd-engagement-panel-section-list-renderer');
+    // Promotional panels can expand on load. They must not open an otherwise empty column.
+    if (!panel || panel.parentElement !== panels || panel.getAttribute('target-id') === 'engagement-panel-ads') return;
+    if (visibility === 'ENGAGEMENT_PANEL_VISIBILITY_EXPANDED') {
+      const focused = document.activeElement;
+      if (panel !== activePanel) opener = focused && watch.contains(focused) && !focused.closest('#secondary') ? focused : lastTrigger;
+      show('native', panel);
+      reveal();
+    } else if (['ENGAGEMENT_PANEL_VISIBILITY_HIDDEN', 'ENGAGEMENT_PANEL_VISIBILITY_COLLAPSED'].includes(visibility) && panel === activePanel) {
+      if (document.fullscreenElement || watch.hasAttribute('fullscreen')) fullscreenPanel = panel;
+      else if (fullscreenPanel !== panel) close();
+    }
+  };
+  const resumePanel = () => {
+    if (document.fullscreenElement || !fullscreenPanel) return;
+    const panel = fullscreenPanel;
+    requestAnimationFrame(() => {
+      if (fullscreenPanel !== panel || !panel.isConnected || watch.getAttribute('video-id') !== videoId || document.fullscreenElement) return;
+      fullscreenPanel = undefined;
+      panel.showPanel?.();
+    });
+  };
+  const remember = event => {
+    const button = event.target.closest?.('button, a, [role=button]');
+    const menu = $('ytd-watch-metadata #actions ytd-menu-renderer', watch);
+    menuRequested = Boolean(menu && button?.closest('ytd-menu-renderer') === menu && button.closest('yt-button-shape, yt-icon-button')?.parentElement === menu);
+    if (button && watch.contains(button) && !button.closest('#secondary')) lastTrigger = button;
+  };
+  const onPopup = event => {
+    const popup = event.detail?.closest?.('ytd-menu-popup-renderer') || event.target.closest?.('ytd-menu-popup-renderer');
+    const items = popup?.querySelector('#items');
+    if (!menuRequested || !items) return;
+    menuRequested = false;
+    // Chat and playlist also need a way back when another component occupies the column.
+    // ponytail: desktop popup menus; add a sheet hook if YouTube moves watch actions to sheets.
+    const choices = [
+      ['chat', 'Live chat', $('#chat-container ytd-live-chat-frame:not(:has(ytd-message-renderer))', watch)],
+      ['playlist', 'Playlist', $('#playlist:not([hidden])', watch)],
+    ];
+    for (const [name, label, surface] of choices) {
+      if (!surface || $(`#docent-open-${name}`, items)) continue;
+      items.append(el('button', { id: `docent-open-${name}`, type: 'button', className: 'docent-menu-item', role: 'menuitem', textContent: label, onclick: () => {
+        opener = lastTrigger;
+        popup.closest('tp-yt-iron-dropdown')?.close();
+        if (name === 'chat' && surface.hasAttribute('collapsed')) $('#show-hide-button button', surface)?.click();
+        show(name);
+        reveal();
+        $('h2, button, iframe', surface)?.focus({ preventScroll: true });
+      } }));
+    }
+  };
+  const observer = new MutationObserver(() => {
+    if (watch.getAttribute('video-id') !== videoId) return;
+    // YouTube can announce expansion before a delayed visibility attribute update.
+    if (activePanel && !activePanel.isConnected) close();
+    else if (!activePanel) {
+      const selector = { related: '#related', chat: '#chat-container ytd-live-chat-frame:not(:has(ytd-message-renderer))', playlist: '#playlist:not([hidden])' }[root.dataset.docentPanel];
+      if (!selector || !$(selector, watch)) show(contextPanel());
+    }
+  });
+  watch.addEventListener('yt-action', onPanelChange, true);
+  document.addEventListener('click', remember, true);
+  document.addEventListener('yt-popup-opened', onPopup, true);
+  document.addEventListener('fullscreenchange', resumePanel);
+  observer.observe(watch, { childList: true, subtree: true, attributes: true, attributeFilter: ['collapsed', 'hidden'] });
+  restoreWatch = () => {
+    observer.disconnect();
+    watch.removeEventListener('yt-action', onPanelChange, true);
+    document.removeEventListener('click', remember, true);
+    document.removeEventListener('yt-popup-opened', onPopup, true);
+    document.removeEventListener('fullscreenchange', resumePanel);
+    fullscreenPanel = undefined;
+    activePanel?.removeAttribute('data-docent-native');
+  };
+  const expanded = [...watch.querySelectorAll('#panels > ytd-engagement-panel-section-list-renderer[visibility=ENGAGEMENT_PANEL_VISIBILITY_EXPANDED]')]
+    .filter(panel => panel.getAttribute('target-id') !== 'engagement-panel-ads').at(-1);
+  show(expanded ? 'native' : contextPanel(), expanded);
 
   // Player: a speed button and a quality picklist in front of the captions button
   const controls = $('.ytp-right-controls-left') || $('.ytp-right-controls');
@@ -227,6 +310,18 @@ function setup(tries = 0) {
 }
 
 document.addEventListener('yt-navigate-finish', () => setup());
+document.addEventListener('DOMContentLoaded', () => setup(), { once: true });
+new MutationObserver(() => setup()).observe(document.documentElement, { attributeFilter: ['dark'] });
+
+document.addEventListener('docent-settings', event => {
+  let next;
+  try { next = JSON.parse(event.detail); } catch { return; }
+  if (!next || typeof next.enabled !== 'boolean' || typeof next.autoScroll !== 'boolean') return;
+  const changed = settings?.enabled !== next.enabled;
+  settings = next;
+  if (changed) setup();
+});
+document.dispatchEvent(new Event('docent-ready'));
 
 // ratechange doesn't bubble, but a capturing listener on document still sees it.
 document.addEventListener('ratechange', () => {
@@ -238,6 +333,7 @@ document.addEventListener('ratechange', () => {
 // scrolls the active row back into view whenever the pointer is off the transcript. The rows sit
 // in nested overflow boxes, so scroll the nearest one that actually scrolls.
 document.addEventListener('timeupdate', () => {
+  if (!settings?.autoScroll || !document.documentElement.hasAttribute('data-docent') || document.documentElement.dataset.docentPanel !== 'native' || $('ytd-watch-flexy[theater], ytd-watch-flexy[fullscreen]') || document.fullscreenElement) return;
   const panel = transcriptPanel();
   const row = panel?.querySelector('.ytwTranscriptSegmentViewModelHostActive, ytd-transcript-segment-renderer.active');
   if (!row?.checkVisibility() || panel.matches(':hover')) return;
