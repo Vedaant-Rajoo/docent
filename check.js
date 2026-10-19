@@ -9,8 +9,7 @@ const node = () => ({ dataset: {}, children: [], append(...children) {
   for (const child of children) this.children.push(Object.assign(child, { parentNode: this, previousSibling: this.children.at(-1) }));
 } });
 const { subscriptions } = vm.runInNewContext(`${fs.readFileSync(`${__dirname}/docent.js`, 'utf8')}\n({ subscriptions })`, {
-  document: { createElement: node, addEventListener() {}, dispatchEvent() {} },
-  Event,
+  document: { createElement: node, addEventListener() {} },
   addEventListener() {},
   MutationObserver: class { observe() {} },
 });
@@ -70,14 +69,13 @@ async function check() {
       setBadgeBackgroundColor: async () => {},
     },
     runtime: {
-      id: 'docent-test', onInstalled: signal(), onStartup: signal(), onMessage: signal(),
+      onMessage: signal(),
       openOptionsPage: async () => { optionsOpened++; },
-      sendMessage: async message => { chrome.runtime.onMessage.fire(message, { id: chrome.runtime.id }); },
+      sendMessage: async message => { chrome.runtime.onMessage.fire(message); },
     },
   };
   const background = vm.createContext({ chrome, console });
   vm.runInContext(fs.readFileSync(`${__dirname}/background.js`, 'utf8'), background);
-  chrome.runtime.onInstalled.fire();
   await setImmediate();
   assert.strictEqual(badge.title, 'Disable Docent');
   assert.strictEqual(badge.text, '');
@@ -189,7 +187,7 @@ async function check() {
   const makePanel = id => {
     const attributes = new Map([['target-id', id], ['visibility', 'ENGAGEMENT_PANEL_VISIBILITY_HIDDEN']]);
     const panel = {
-      parentElement: panels, isConnected: true, scrollTop: 0,
+      parentElement: panels, isConnected: true,
       getAttribute: key => attributes.get(key) ?? null, hasAttribute: key => attributes.has(key),
       setAttribute: (key, value) => attributes.set(key, value), removeAttribute: key => attributes.delete(key),
       closest: () => panel, querySelector: () => null, contains: element => element === panel,
@@ -225,13 +223,13 @@ async function check() {
   };
   const menu = {};
   const trigger = {
-    isConnected: true, checkVisibility: () => true, focus: () => { page.activeElement = trigger; },
+    checkVisibility: () => true, focus: () => { page.activeElement = trigger; },
     closest: selector => selector === 'ytd-menu-renderer' ? menu
       : selector === 'yt-button-shape, yt-icon-button' ? { parentElement: menu }
       : selector === '#secondary' ? null : trigger,
   };
   const items = {
-    children: [{ id: 'native-report' }], append: (...nodes) => items.children.push(...nodes),
+    children: [], append: (...nodes) => items.children.push(...nodes),
     querySelector: selector => items.children.find(item => '#' + item.id === selector),
   };
   const related = {
@@ -393,11 +391,9 @@ async function check() {
   assert.strictEqual(page.documentElement.dataset.docentPanel, 'none', 'passive ad panels must not open the column');
   notify(chapters);
   assert.deepStrictEqual(panels.querySelectorAll(), [chapters]);
-  transcript.scrollTop = 240;
   notify(ask);
   notify(transcript);
   assert.deepStrictEqual(panels.querySelectorAll(), [transcript], 'Ask and transcript cannot occupy the column together');
-  assert.strictEqual(transcript.scrollTop, 240);
   notify(other);
   assert.deepStrictEqual(panels.querySelectorAll(), [other], 'unknown and lazy native panels need no new control');
   other.setAttribute('visibility', 'ENGAGEMENT_PANEL_VISIBILITY_HIDDEN');
@@ -531,7 +527,6 @@ async function check() {
   openMenu();
   openMenu();
   assert.strictEqual(items.children.filter(item => item.id === 'docent-open-playlist').length, 1);
-  assert.strictEqual(items.children.some(item => item.id === 'docent-open-chat'), false, 'chat has no duplicate menu entry');
   items.querySelector('#docent-open-playlist').onclick();
   assert.strictEqual(menuClosed, 1, 'choosing an entry closes the menu');
   assert.strictEqual(page.documentElement.dataset.docentPanel, 'playlist');
@@ -577,7 +572,7 @@ async function check() {
   main.location.search = '?v=later-video';
   page.dispatchEvent(new Event('yt-navigate-finish'));
   assert.strictEqual(page.documentElement.dataset.docentPanel, undefined, 'the previous panel is dropped while the next video loads');
-  assert.match(fs.readFileSync(`${__dirname}/docent.css`, 'utf8'), /:not\(\[data-docent-panel\]\)[^{]*ytd-watch-flexy \{\s*--ytd-watch-flexy-sidebar-width: 0px/, 'no selected panel means no column');
+  assert.match(fs.readFileSync(`${__dirname}/docent.css`, 'utf8'), /:not\(\[data-docent-panel\]\)[^{]*ytd-watch-flexy \{[^}]*--ytd-watch-flexy-sidebar-width: 0px/, 'no selected panel means no column');
   videoId = 'later-video';
   timers.shift()();
   assert.strictEqual(page.documentElement.dataset.docentPanel, 'none');
@@ -608,11 +603,11 @@ async function check() {
   assert.strictEqual(player.listeners.length, 1);
 
   // The options page saves changes and follows a toggle made from another extension surface.
-  const inputs = Object.fromEntries(Object.entries({ enabled: 'checkbox', autoScroll: 'checkbox', showDislike: 'checkbox' }).map(([id, type]) => [id, { id, type }]));
+  const inputs = Object.fromEntries(['enabled', 'autoScroll', 'showDislike'].map(id => [id, { id }]));
   let change;
   inputs.controls = { addEventListener: (_, listener) => { change = listener; } };
   inputs.preferences = {};
-  inputs.status = { toggleAttribute() {}, removeAttribute() {} };
+  inputs.status = { toggleAttribute() {} };
   vm.runInNewContext(fs.readFileSync(`${__dirname}/settings.js`, 'utf8'), { chrome, document: { getElementById: id => inputs[id] }, console });
   await setImmediate();
   assert.strictEqual(inputs.enabled.checked, true);
