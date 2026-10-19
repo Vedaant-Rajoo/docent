@@ -38,7 +38,7 @@ Google requires disclosure of data handled locally, even when it is never sent t
 | Location | No | Docent does not request a location or use a location API. YouTube and its image providers receive ordinary network request information. |
 | Web history | Yes | The current YouTube page address and video identifier are used to keep the layout in step with navigation. Docent does not read Chrome's history database or save a list of visited pages. |
 | User activity | Yes | Page-control clicks, the search keyboard shortcut, player events, focus, and transcript position are handled in the tab to operate the interface. Docent does not log clicks or keystrokes. |
-| Website content | Yes | YouTube guide data, channel image URLs, native panel structure, transcript row state, and player information are used to display the interface. No copy is saved in extension storage. |
+| Website content | Yes | YouTube guide data, channel image URLs, the watch page's data for live chat availability, native panel structure, transcript row state, and player information are used to display the interface. No copy is saved in extension storage. |
 
 The extension saves only its enabled, transcript auto-scroll, and Dislike button preferences in `chrome.storage.local`. They are not synced by Docent. Page data is used in tab memory. Cached guide data can remain until the tab is closed or fully reloaded.
 
@@ -63,8 +63,8 @@ Support: <https://github.com/Vedaant-Rajoo/docent/issues>
 ## Reviewer instructions
 
 1. Open desktop `https://www.youtube.com/` and choose YouTube's dark theme. Docent stays inactive in the light theme.
-2. Open a video. Use its native chapter or transcript control when available. The selected component occupies the shared column. The Recommended button opens video recommendations.
-3. Open Docent settings from the gear in its rail. Change transcript auto-scroll, then reload YouTube to confirm the setting is saved.
+2. Open a video. Use its native chapter or transcript control when available. The selected component occupies the shared column. The Recommended button opens video recommendations; a live stream or a video with chat replay adds a chat button beside it. The player bar shows speed and resolution pickers and a picture-in-picture button.
+3. Open Docent settings from the gear in its rail. Change transcript auto-scroll or Show Dislike, then reload YouTube to confirm the setting is saved.
 4. Click Docent's Chrome toolbar button to disable or enable its layout across open YouTube tabs.
 
 Basic layout testing does not need a Docent account. Subscriptions need a YouTube account; chat, transcripts, chapters, and Ask depend on what YouTube provides for the account and video. Docent does not provide its own AI service.

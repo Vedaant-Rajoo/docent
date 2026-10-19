@@ -2,7 +2,7 @@
 
 Docent is a Chrome extension that gives desktop YouTube a smaller interface, with an icon rail and a shared column beside the video.
 
-This is an alpha. It requires YouTube's dark theme and runs on `https://www.youtube.com/`.
+This is an alpha. It requires Chrome 111 or newer and YouTube's dark theme, and runs on `https://www.youtube.com/`.
 
 ## What it changes
 
@@ -66,7 +66,7 @@ With Node.js 26 installed, run this from the repository:
 node check.js
 ```
 
-The script checks settings, extension toggling, transcript scrolling, and panel switching using simulated browser APIs and page elements. Check layout changes on YouTube too; this script cannot verify how the page looks or whether YouTube has changed its markup.
+The script checks settings, extension toggling, the player bar, chat and panel switching, transcript scrolling, and navigation using simulated browser APIs and page elements. Check layout changes on YouTube too; this script cannot verify how the page looks or whether YouTube has changed its markup.
 
 ## Privacy and license
 
