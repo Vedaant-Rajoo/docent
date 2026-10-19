@@ -353,9 +353,7 @@ document.addEventListener('yt-navigate-finish', () => setup());
 document.addEventListener('DOMContentLoaded', () => setup());
 new MutationObserver(() => setup()).observe(document.documentElement, { attributeFilter: ['dark'] });
 
-document.addEventListener('docent-settings', event => {
-  let next;
-  try { next = JSON.parse(event.detail); } catch { return; }
+document.addEventListener('docent-settings', ({ detail: next }) => {
   if (!next || typeof next.enabled !== 'boolean' || typeof next.autoScroll !== 'boolean') return;
   const changed = settings?.enabled !== next.enabled;
   settings = next;
@@ -363,7 +361,6 @@ document.addEventListener('docent-settings', event => {
   document.documentElement.toggleAttribute('data-docent-dislike', next.showDislike === true);
   if (changed) setup();
 });
-document.dispatchEvent(new Event('docent-ready'));
 
 // ratechange doesn't bubble, but a capturing listener on document still sees it.
 document.addEventListener('ratechange', syncPlayer, true);

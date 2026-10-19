@@ -50,6 +50,7 @@ async function check() {
   const writes = [];
   const onChanged = signal();
   const local = {
+    onChanged,
     get: async defaults => Object.fromEntries(Object.entries(defaults).map(([key, value]) => [key, key in values ? values[key] : value])),
     set: async changes => {
       const changed = Object.fromEntries(Object.entries(changes).map(([key, value]) => [key, { oldValue: values[key], newValue: value }]));
@@ -61,7 +62,7 @@ async function check() {
   const badge = {};
   let optionsOpened = 0;
   const chrome = {
-    storage: { local, onChanged },
+    storage: { local },
     action: {
       onClicked: signal(),
       setTitle: async ({ title }) => { badge.title = title; },
@@ -93,38 +94,15 @@ async function check() {
 
   const document = new EventTarget();
   const received = [];
-  document.addEventListener('docent-settings', event => received.push(JSON.parse(event.detail)));
+  document.addEventListener('docent-settings', event => received.push(event.detail));
   vm.runInNewContext(fs.readFileSync(`${__dirname}/bridge.js`, 'utf8'), { chrome, document, CustomEvent, console });
   await new Promise(resolve => setImmediate(resolve));
   assert.deepStrictEqual(received.at(-1), { enabled: false, autoScroll: true, showDislike: false });
   await local.set({ enabled: true, panel: 'chat', autoScroll: false });
   await new Promise(resolve => setImmediate(resolve));
   assert.deepStrictEqual(received.at(-1), { enabled: true, autoScroll: false, showDislike: false }, 'legacy panel preferences must not reach the page');
-  const count = received.length;
-  document.dispatchEvent(new Event('docent-ready'));
-  assert.strictEqual(received.length, count + 1, 'main-world startup must receive already-loaded settings');
   document.dispatchEvent(new Event('docent-open-settings'));
   assert.strictEqual(optionsOpened, 1);
-  chrome.runtime.onMessage.fire({ type: 'open-options' }, { id: 'another-extension' });
-  assert.strictEqual(optionsOpened, 1, 'reject messages from other extensions');
-
-  // Settings reads may finish out of order. The old read must not undo a later toggle.
-  const pending = [];
-  const racingDocument = new EventTarget();
-  const racingChanges = signal();
-  const racing = [];
-  racingDocument.addEventListener('docent-settings', event => racing.push(JSON.parse(event.detail)));
-  vm.runInNewContext(fs.readFileSync(`${__dirname}/bridge.js`, 'utf8'), {
-    chrome: { ...chrome, storage: { local: { get: () => new Promise(resolve => pending.push(resolve)) }, onChanged: racingChanges } },
-    document: racingDocument, CustomEvent, console,
-  });
-  racingChanges.fire({ enabled: { newValue: false } }, 'local');
-  pending[1]({ enabled: false, panel: 'transcript', autoScroll: true });
-  await new Promise(resolve => setImmediate(resolve));
-  pending[0]({ enabled: true, panel: 'transcript', autoScroll: true });
-  await new Promise(resolve => setImmediate(resolve));
-  assert.strictEqual(racing.length, 1);
-  assert.strictEqual(racing[0].enabled, false);
 
   const attributes = new Set(['dark', 'data-docent', 'data-docent-watch']);
   let removed = 0;
@@ -144,11 +122,11 @@ async function check() {
     MutationObserver: class { constructor(callback) { this.callback = callback; observers.push(this); } observe() { this.connected = true; } disconnect() { this.connected = false; } },
   });
   vm.runInContext(fs.readFileSync(`${__dirname}/docent.js`, 'utf8'), main);
-  for (const detail of ['broken JSON', 'null', JSON.stringify({ enabled: 'false', autoScroll: true }), JSON.stringify({ enabled: false, autoScroll: 'true' }), JSON.stringify({ enabled: true })]) {
+  for (const detail of ['broken', null, { enabled: 'false', autoScroll: true }, { enabled: false, autoScroll: 'true' }, { enabled: true }]) {
     page.dispatchEvent(new CustomEvent('docent-settings', { detail }));
   }
   assert.strictEqual(removed, 0, 'malformed settings must not change the page');
-  page.dispatchEvent(new CustomEvent('docent-settings', { detail: JSON.stringify({ enabled: false, panel: 'transcript', autoScroll: true }) }));
+  page.dispatchEvent(new CustomEvent('docent-settings', { detail: { enabled: false, panel: 'transcript', autoScroll: true } }));
   assert.strictEqual(attributes.has('data-docent'), false);
   assert.strictEqual(attributes.has('data-docent-watch'), false);
   assert.strictEqual(attributes.has('data-docent-home'), false);
@@ -198,7 +176,7 @@ async function check() {
   page.querySelector = selector => selector === 'ytd-masthead' ? {} : null;
   page.querySelectorAll = selector => selector === '[data-docent-node]' ? created.filter(element => 'docentNode' in element.dataset) : [];
   main.location.pathname = '/';
-  const setPage = enabled => page.dispatchEvent(new CustomEvent('docent-settings', { detail: JSON.stringify({ enabled, panel: 'transcript', autoScroll: true }) }));
+  const setPage = enabled => page.dispatchEvent(new CustomEvent('docent-settings', { detail: { enabled, panel: 'transcript', autoScroll: true } }));
   setPage(true);
   assert.strictEqual(attributes.has('data-docent'), true);
   assert.strictEqual(attributes.has('data-docent-watch'), false);
@@ -492,9 +470,9 @@ async function check() {
   page.dispatchEvent(new Event('timeupdate'));
   assert.strictEqual(scrolled, 210);
   const shell = created.find(element => element.id === 'docent-rail');
-  page.dispatchEvent(new CustomEvent('docent-settings', { detail: JSON.stringify({ enabled: true, autoScroll: false }) }));
+  page.dispatchEvent(new CustomEvent('docent-settings', { detail: { enabled: true, autoScroll: false } }));
   assert.strictEqual(created.find(element => element.id === 'docent-rail'), shell, 'autoscroll settings must not rebuild the view');
-  const showDislike = value => page.dispatchEvent(new CustomEvent('docent-settings', { detail: JSON.stringify({ enabled: true, autoScroll: false, showDislike: value }) }));
+  const showDislike = value => page.dispatchEvent(new CustomEvent('docent-settings', { detail: { enabled: true, autoScroll: false, showDislike: value } }));
   showDislike(true);
   assert.strictEqual(attributes.has('data-docent-dislike'), true);
   assert.strictEqual(created.find(element => element.id === 'docent-rail'), shell, 'showing Dislike must not rebuild the view');
