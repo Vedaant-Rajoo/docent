@@ -397,6 +397,20 @@ async function checkSettings() {
   assert.strictEqual(panelObserver.connected, false);
   assert.strictEqual(page.documentElement.dataset.docentPanel, 'none');
   assert.strictEqual(panels.querySelectorAll().length, 0);
+  // yt-navigate-finish fires before the watch page shows the new video, so setup waits for it. Meanwhile
+  // no panel is selected, and that state must have no column, or the column flashes open on every load.
+  const timers = [];
+  main.setTimeout = (callback, _, ...args) => timers.push(() => callback(...args));
+  created.find(element => element.id === 'docent-recommended').onclick();
+  assert.strictEqual(page.documentElement.dataset.docentPanel, 'related');
+  main.location.search = '?v=later-video';
+  page.dispatchEvent(new Event('yt-navigate-finish'));
+  assert.strictEqual(page.documentElement.dataset.docentPanel, undefined, 'the previous panel is dropped while the next video loads');
+  assert.match(fs.readFileSync(`${__dirname}/docent.css`, 'utf8'), /:not\(\[data-docent-panel\]\)[^{]*ytd-watch-flexy \{\s*--ytd-watch-flexy-sidebar-width: 0px/, 'no selected panel means no column');
+  videoId = 'later-video';
+  timers.shift()();
+  assert.strictEqual(page.documentElement.dataset.docentPanel, 'none');
+  assert.strictEqual(timers.length, 0);
   notify(chapters);
   setPage(false);
   assert.strictEqual(chapters.getAttribute('visibility'), 'ENGAGEMENT_PANEL_VISIBILITY_EXPANDED', 'disabling must not rewrite native visibility');

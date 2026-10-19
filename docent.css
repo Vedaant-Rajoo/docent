@@ -76,12 +76,23 @@ html[data-docent] {
     & #right-arrow::before { background: linear-gradient(to left, var(--docent-bg), transparent) !important; }
   }
 
-  /* The selected component uses the column. Ordinary videos start without one. */
+  /* The selected component uses the column. Ordinary videos start without one, and so does every load
+     and navigation while docent.js waits for the new video before choosing a panel. */
   & ytd-watch-flexy { --ytd-watch-flexy-sidebar-width: 360px !important; }
-  &[data-docent-panel=none] ytd-watch-flexy {
+  &:is(:not([data-docent-panel]), [data-docent-panel=none]) ytd-watch-flexy {
     --ytd-watch-flexy-sidebar-width: 0px !important; --ytd-watch-flexy-sidebar-min-width: 0px !important;
     & #primary { flex: 1 !important; min-width: 0 !important; max-width: none !important; }
     & #secondary { display: none !important; }
+  }
+  /* Until YouTube's app starts, a fresh load or refresh shows the skeleton from YouTube's HTML: a player sized for
+     the native column layout, and in some builds placeholder videos beside it. The real player first appears in
+     that skeleton too. Give it the place and size Docent's player takes (after the rail, as wide as fits, 16:9),
+     so the video doesn't jump when the app takes over. */
+  & #watch-page-skeleton #related { display: none !important; }
+  @media (min-width: 1001px) {
+    & #player.skeleton.flexy { max-width: none !important; margin: 56px 0 0 !important; padding: 12px 16px 0 80px !important; }
+    & #player.skeleton.flexy #player-wrap { width: auto !important; }
+    & #player.skeleton.flexy :is(#player-api, #player-placeholder) { width: min(100%, (100vh - 116px) * 16 / 9) !important; height: auto !important; aspect-ratio: 16 / 9; border-radius: 16px; }
   }
   & ytd-watch-flexy #secondary-inner { box-sizing: border-box; display: flex; flex-direction: column; background: var(--docent-card); border: 1px solid var(--docent-line); border-radius: 16px; overflow: hidden; }
   & ytd-watch-flexy[theater] :is(#secondary, #panels, #chat-container) { display: none !important; }
