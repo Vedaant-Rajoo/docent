@@ -169,10 +169,10 @@ function setup(tries = 0) {
   );
   document.body.append(el('a', { id: 'docent-logo', title: 'YouTube', ariaLabel: 'YouTube', href: '/' }, logo()), rail);
   // ponytail: one fetch per page load, so channels subscribed to since then show after a reload.
-  guide ??= $('ytd-app')?.guideService?.fetchGuideData?.().catch(() => null);
+  guide ??= $('ytd-app')?.guideService?.fetchGuideData?.();
   guide?.then(data => {
     if (rail.isConnected) channels.replaceChildren(...subscriptions(data));
-  });
+  }, () => { guide = undefined; });
   if (!onWatchPage) {
     dispatchEvent(new Event('resize'));
     return;
@@ -182,7 +182,6 @@ function setup(tries = 0) {
   if (!watch) return;
   const player = $('#movie_player');
   const panels = $('#panels', watch);
-  const videoId = watch.getAttribute('video-id');
   let activePanel, activeChat, opener, lastTrigger, fullscreenPanel, menuRequested = false;
   const surface = name => {
     const selector = { related: '#related', chat: '#chat-container', playlist: '#playlist:not([hidden])' }[name];
@@ -190,7 +189,7 @@ function setup(tries = 0) {
   };
   const chatFrame = () => $('#chat-container ytd-live-chat-frame', watch);
   // ponytail: desktop watch-next data; update this path if YouTube changes how it advertises chat.
-  const chatData = () => watch.data?.currentVideoEndpoint?.watchEndpoint?.videoId === videoId
+  const chatData = () => watch.data?.currentVideoEndpoint?.watchEndpoint?.videoId === watch.getAttribute('video-id')
     ? watch.data?.contents?.twoColumnWatchNextResults?.conversationBar?.liveChatRenderer : null;
   const expandChat = () => {
     activeChat = chatFrame();
@@ -245,8 +244,8 @@ function setup(tries = 0) {
       card.toggleAttribute('data-docent-chat-entry', Boolean(data && card.data?.teaserType === 'WATCH_UI_TEASER_TYPE_LIVE_CHAT')));
   };
   const onPanelChange = event => {
-    if (watch.getAttribute('video-id') !== videoId || event.detail?.actionName !== 'yt-engagement-panel-visible-changed' || !Array.isArray(event.detail.args)) return;
-    const visibility = event.detail.args[1];
+    if (event.detail?.actionName !== 'yt-engagement-panel-visible-changed') return;
+    const visibility = event.detail.args?.[1];
     const panel = event.target.closest?.('ytd-engagement-panel-section-list-renderer');
     // Promotional panels can expand on load. They must not open an otherwise empty column.
     if (!panel || panel.parentElement !== panels || panel.getAttribute('target-id') === 'engagement-panel-ads') return;
@@ -261,7 +260,7 @@ function setup(tries = 0) {
     }
   };
   const onChatChange = event => {
-    if (watch.getAttribute('video-id') !== videoId || event.target !== activeChat || event.detail !== true || root.dataset.docentPanel !== 'chat') return;
+    if (event.target !== activeChat || event.detail !== true || root.dataset.docentPanel !== 'chat') return;
     if (document.fullscreenElement || watch.hasAttribute('fullscreen')) fullscreenPanel = event.target;
     else if (fullscreenPanel !== event.target) close();
   };
@@ -269,7 +268,7 @@ function setup(tries = 0) {
     if (document.fullscreenElement || watch.hasAttribute('fullscreen') || !fullscreenPanel) return;
     const panel = fullscreenPanel;
     requestAnimationFrame(() => {
-      if (fullscreenPanel !== panel || !panel.isConnected || watch.getAttribute('video-id') !== videoId || document.fullscreenElement || watch.hasAttribute('fullscreen')) return;
+      if (fullscreenPanel !== panel || !panel.isConnected || document.fullscreenElement || watch.hasAttribute('fullscreen')) return;
       fullscreenPanel = undefined;
       if (panel === activePanel) panel.showPanel?.();
       else if (root.dataset.docentPanel === 'chat' && panel === chatFrame()) expandChat();
@@ -320,7 +319,6 @@ function setup(tries = 0) {
     syncPlayer();
   };
   const observer = new MutationObserver(() => {
-    if (watch.getAttribute('video-id') !== videoId) return;
     syncChat();
     reveal();
     // YouTube can announce expansion before a delayed visibility attribute update.
