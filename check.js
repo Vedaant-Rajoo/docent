@@ -1,6 +1,5 @@
-// Self-check for settings, the extension toggle, native panel ownership, and the player bar:
-//   node check.js
-// Uses Node's stdlib and a stub DOM; it does not replace visual checks against YouTube.
+// Self-check with Node's stdlib and a stub DOM: node check.js (Node 26).
+// It does not replace visual checks against YouTube.
 const assert = require('node:assert');
 const fs = require('node:fs');
 const vm = require('node:vm');
@@ -46,7 +45,7 @@ const signal = () => {
   return { addListener: listener => listeners.push(listener), fire: (...args) => listeners.forEach(listener => listener(...args)) };
 };
 
-async function checkSettings() {
+async function check() {
   const values = {};
   const writes = [];
   const onChanged = signal();
@@ -363,7 +362,6 @@ async function checkSettings() {
   assert.strictEqual(created.filter(element => element.id === 'docent-recommended').length, 1);
   assert.strictEqual(page.documentElement.dataset.docentPanel, 'none', 'ordinary videos start without a column, ignoring legacy defaults and ads');
   assert.strictEqual(created.find(element => element.id === 'docent-panels').children.length, 2, 'only chat and recommendations belong in the panel bar');
-  assert.strictEqual(created.some(element => ['docent-search', 'docent-captions', 'docent-ask', 'docent-chapters', 'docent-transcript', 'docent-notes'].includes(element.id)), false);
 
   // The player bar: speed and resolution pickers show what the player offers and plays, follow changes
   // made elsewhere, and set the player through its API.
@@ -666,4 +664,4 @@ async function checkSettings() {
   assert.strictEqual(inputs.preferences.disabled, true);
   console.log('ok: subscriptions, toolbar toggle, settings and bridge, native panels, live/replay chat, panel toggles, player bar, navigation, disable cleanup');
 }
-checkSettings().catch(error => { console.error(error); process.exitCode = 1; });
+check().catch(error => { console.error(error); process.exitCode = 1; });

@@ -162,4 +162,4 @@ for operation, revision, upload, processed, published, success, calls in cases:
         recorded = Path(directory) / "calls"
         assert (recorded.read_text().splitlines() if recorded.exists() else []) == calls, result.stdout
 
-print(f"ok: reproducible ZIP, 4 release checks, 4 asset checks, {len(cases)} Store scenarios")
+print("ok: reproducible ZIP, release validation, asset retries, Store scenarios")

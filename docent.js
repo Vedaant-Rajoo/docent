@@ -3,8 +3,8 @@
 // attribute while enabled and adds Docent's own nodes. YouTube re-renders and re-measures
 // its nodes, so Docent hides and restyles them but never moves them.
 //
-// This file runs in the page's main world because the player API (getPlayerResponse,
-// setPlaybackRate) lives there. YouTube enforces Trusted Types in that world, so innerHTML
+// This file runs in the page's main world because the player API (setPlaybackRate,
+// getAvailableQualityData) lives there. YouTube enforces Trusted Types in that world, so innerHTML
 // throws; build nodes with createElement and textContent.
 // bridge.js handles storage in the isolated world.
 
@@ -24,7 +24,6 @@ const svg = (tag, attributes, ...children) => {
   return node;
 };
 
-// A 20px stroke icon drawn from one SVG path.
 const icon = d => svg('svg', { viewBox: '0 0 24 24', width: 20, height: 20, fill: 'none', stroke: 'currentColor', 'stroke-width': 1.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, svg('path', { d }));
 
 // YouTube's logo: a red rounded rectangle with a white play triangle.
@@ -53,7 +52,6 @@ let settings;
 let setupTimer;
 let restoreWatch = () => {};
 
-// YouTube's guide, fetched once per page load for the subscriptions in the rail.
 let guide;
 
 // YouTube serves two transcript layouts: transcript-segment-view-model rows and the older
@@ -130,7 +128,7 @@ function setup(tries = 0) {
   restoreWatch = () => {};
   const root = document.documentElement;
   const onWatchPage = location.pathname === '/watch';
-  // Preserve the existing dark-theme requirement: native light text colors do not suit this layout.
+  // Dark theme only: YouTube's light-theme text colors do not suit this layout.
   const on = Boolean(settings?.enabled && root.hasAttribute('dark'));
   const wasOn = root.hasAttribute('data-docent');
   document.querySelectorAll('[data-docent-node]').forEach(node => node.remove());

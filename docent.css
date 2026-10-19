@@ -20,7 +20,7 @@ html[data-docent] {
 
   /* Header: the search box alone in the middle, plus Docent's buttons */
   & ytd-masthead :is(#start, #end, #voice-search-button, .ytSearchboxComponentSearchButton, .ytSearchboxComponentClearButtonWrapper) { display: none !important; }
-  /* YouTube's clear button sat where the ⌘K hint goes. Without it, the padding keeps long queries clear of the hint. */
+  /* Room for the ⌘K hint where YouTube's hidden clear button was. */
   & yt-searchbox input.ytSearchboxComponentInput { padding-right: 40px !important; }
   & ytd-masthead #container { justify-content: center !important; }
   /* Keep search clear of the header controls. */
@@ -37,6 +37,7 @@ html[data-docent] {
   &[data-docent-home] ytd-masthead {
     & #center { max-width: calc(100vw - 360px) !important; }
     & #end { display: flex !important; position: fixed; top: 10px; right: 64px; height: 36px; min-width: 0 !important; padding: 0 !important; z-index: 2100; }
+    /* ponytail: Create here and Clip/Thanks under the video match YouTube's English aria-labels; tag those buttons with a data-docent-* marker from docent.js when supporting other UI languages. */
     & #end > :not(#buttons), & #buttons > :not(ytd-notification-topbar-button-renderer, :has([aria-label=Create])) { display: none !important; }
     & #buttons { display: flex; gap: 4px; margin: 0 !important; }
     & #buttons > :is(ytd-notification-topbar-button-renderer, :has([aria-label=Create])) { width: 36px !important; height: 36px !important; margin: 0 !important; padding: 0 !important; }
@@ -45,7 +46,6 @@ html[data-docent] {
     & #end button:hover { background: var(--docent-fill) !important; }
     & #end button:focus-visible { outline: 2px solid #a9b8e8; outline-offset: 2px; }
     & #end yt-icon { width: 20px !important; height: 20px !important; }
-    /* ponytail: Create uses YouTube's English label; use a data marker when supporting localized headers. */
     & button[aria-label=Create] > :not(yt-touch-feedback-shape, yt-interaction) { display: none !important; }
     & button[aria-label=Create]::before { content: '+'; font: 300 26px/20px Arial, sans-serif; }
   }
@@ -54,8 +54,7 @@ html[data-docent] {
   & #docent-panels [aria-pressed=true] { background: #ededee; color: #141416; }
   & .docent-icon:focus-visible { outline: 2px solid #a9b8e8; outline-offset: 2px; }
 
-  /* Icon rail: YouTube's logo in the corner above it, the library links, then the subscriptions,
-     which scroll on their own below the links */
+  /* Icon rail */
   & #docent-logo { position: fixed; top: 10px; left: 14px; z-index: 2100; width: 36px; height: 36px; display: grid; place-items: center; }
   & #docent-rail { position: fixed; top: 56px; left: 0; bottom: 0; width: 64px; z-index: 2050; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 0; background: var(--docent-bg); box-sizing: border-box; }
   & #docent-subscriptions { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; display: flex; flex-direction: column; gap: 6px; padding-top: 6px; border-top: 1px solid var(--docent-line); }

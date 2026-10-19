@@ -6,7 +6,7 @@ This is an alpha. It requires YouTube's dark theme and runs on `https://www.yout
 
 ## What it changes
 
-- A compact header and navigation rail on the home and watch pages. The rail includes library links and subscribed channels. Home categories keep YouTube's filters, with simpler styling.
+- A compact header and navigation rail across YouTube. The rail includes library links and subscribed channels. Home categories keep YouTube's filters, with simpler styling.
 - One watch panel at a time. Open Ask, chapters, transcripts, or comments through YouTube's own controls when available. A Recommended button in the header opens video recommendations.
 - Live streams and videos with chat replay get a chat button in the header. Press a panel button to show or hide it; choosing another replaces the open panel. Playlists remain available through the video's More actions menu.
 - The transcript follows the current line during playback. Hover over the transcript to read without automatic scrolling.
@@ -32,7 +32,7 @@ Updates to unpacked installs are manual. Replace the files in the same folder, r
 
 There is no build step.
 
-1. Get a source copy of Docent and extract it. If you have access to this repository, you can clone it:
+1. Clone the repository:
 
    ```sh
    git clone https://github.com/Vedaant-Rajoo/docent.git
@@ -56,7 +56,7 @@ Open settings from the gear at the bottom of Docent's rail, or right-click its t
 - YouTube's light theme leaves Docent inactive. Some controls depend on YouTube's English labels.
 - YouTube changes its page structure and tests different layouts. Updates can break parts of Docent.
 - Ask, transcripts, chapters, chat, and other native features appear only where YouTube provides them. Docent does not add an AI service.
-- New subscriptions appear in the rail after a page reload. Notes are not implemented.
+- New subscriptions appear in the rail after a page reload.
 
 ## Report a bug
 
