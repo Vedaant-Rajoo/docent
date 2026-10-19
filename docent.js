@@ -172,7 +172,6 @@ function setup(tries = 0) {
     dispatchEvent(new Event('resize'));
     return;
   }
-  const player = $('#movie_player');
   const panels = $('#panels', watch);
   let activePanel, activeChat, opener, lastTrigger, fullscreenPanel, menuRequested = false;
   const surface = name => {
@@ -180,6 +179,7 @@ function setup(tries = 0) {
     return name === 'native' ? activePanel : selector ? $(selector, watch) : null;
   };
   const chatFrame = () => $('#chat-container ytd-live-chat-frame', watch);
+  const inFullscreen = () => document.fullscreenElement || watch.hasAttribute('fullscreen');
   // ponytail: desktop watch-next data; update this path if YouTube changes how it advertises chat.
   const chatData = () => watch.data?.currentVideoEndpoint?.watchEndpoint?.videoId === watch.getAttribute('video-id')
     ? watch.data?.contents?.twoColumnWatchNextResults?.conversationBar?.liveChatRenderer : null;
@@ -205,11 +205,15 @@ function setup(tries = 0) {
     fullscreenPanel = undefined;
     const focused = surface(root.dataset.docentPanel)?.contains(document.activeElement);
     show('none');
-    const target = opener?.checkVisibility() ? opener : player;
+    const target = opener?.checkVisibility() ? opener : $('#movie_player');
     if (focused || document.activeElement === document.body) target?.focus({ preventScroll: true });
   };
+  // A click inside the mutation callback is lost, and YouTube drops [theater] about 50ms after the one that
+  // works, so click once per change, in the next frame.
   const reveal = () => {
-    if (watch.hasAttribute('theater') && !watch.hasAttribute('fullscreen') && !document.fullscreenElement) $('.ytp-size-button')?.click();
+    if (watch.hasAttribute('theater') && !inFullscreen()) requestAnimationFrame(() => {
+      if (watch.hasAttribute('theater') && !inFullscreen()) $('.ytp-size-button')?.click();
+    });
   };
   const toggle = (name, button) => {
     if (root.dataset.docentPanel === name) return close();
@@ -221,7 +225,6 @@ function setup(tries = 0) {
       el('button', { type: 'button', textContent: 'Close', ariaLabel: 'Close recommendations', onclick: close }),
     ));
     show(name);
-    reveal();
     if (name === 'chat') expandChat();
     if (content) $('h2, button, iframe', content)?.focus();
   };
@@ -245,7 +248,6 @@ function setup(tries = 0) {
       const focused = document.activeElement;
       if (panel !== activePanel) opener = focused && watch.contains(focused) && !focused.closest('#secondary') ? focused : lastTrigger;
       show('native', panel);
-      reveal();
     } else if (['ENGAGEMENT_PANEL_VISIBILITY_HIDDEN', 'ENGAGEMENT_PANEL_VISIBILITY_COLLAPSED'].includes(visibility) && panel === activePanel) {
       if (document.fullscreenElement || watch.hasAttribute('fullscreen')) fullscreenPanel = panel;
       else if (fullscreenPanel !== panel) close();
@@ -310,9 +312,9 @@ function setup(tries = 0) {
     }
     syncPlayer();
   };
-  const observer = new MutationObserver(() => {
+  const observer = new MutationObserver(records => {
     syncChat();
-    reveal();
+    if (records.some(record => ['theater', 'fullscreen'].includes(record.attributeName))) reveal();
     // YouTube can announce expansion before a delayed visibility attribute update.
     if (activePanel && !activePanel.isConnected) close();
     else if (root.dataset.docentPanel === 'chat' ? chat.hidden

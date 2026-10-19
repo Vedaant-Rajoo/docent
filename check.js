@@ -119,7 +119,7 @@ async function check() {
     addEventListener() {}, dispatchEvent() { resized++; },
     requestAnimationFrame: callback => frames.push(callback),
     getComputedStyle: () => ({ overflowY: 'auto' }),
-    MutationObserver: class { constructor(callback) { this.callback = callback; observers.push(this); } observe() { this.connected = true; } disconnect() { this.connected = false; } },
+    MutationObserver: class { constructor(callback) { this.callback = (records = []) => callback(records); observers.push(this); } observe() { this.connected = true; } disconnect() { this.connected = false; } },
   });
   vm.runInContext(fs.readFileSync(`${__dirname}/docent.js`, 'utf8'), main);
   for (const detail of ['broken', null, { enabled: 'false', autoScroll: true }, { enabled: false, autoScroll: 'true' }, { enabled: true }]) {
@@ -387,9 +387,7 @@ async function check() {
   page.activeElement = trigger;
   notify(ads);
   assert.strictEqual(page.documentElement.dataset.docentPanel, 'none', 'passive ad panels must not open the column');
-  theater = true;
   notify(chapters);
-  assert.strictEqual(theater, false, 'an explicit native panel action leaves theater mode');
   assert.deepStrictEqual(panels.querySelectorAll(), [chapters]);
   transcript.scrollTop = 240;
   notify(ask);
@@ -429,9 +427,7 @@ async function check() {
   assert.strictEqual(page.documentElement.dataset.docentPanel, 'none', 'the glyph toggles recommendations closed');
   assert.strictEqual(recommended.ariaPressed, 'false');
   assert.strictEqual(page.activeElement, recommended);
-  theater = true;
   recommended.onclick();
-  assert.strictEqual(theater, false, 'opening recommendations leaves theater mode');
   notify(ask);
   assert.strictEqual(recommended.ariaPressed, 'false', 'native panels clear the recommendations state');
   assert.deepStrictEqual(panels.querySelectorAll(), [ask]);
@@ -519,7 +515,10 @@ async function check() {
   assert.strictEqual(chatCollapsed, false, 'fullscreen exit restores the selected chat through YouTube');
   chatButton.onclick();
   theater = true;
+  panelObserver.callback([{ attributeName: 'theater' }]);
   panelObserver.callback();
+  assert.strictEqual(frames.length, 1, 'one click per theater change, after the callback');
+  frames.shift()();
   assert.strictEqual(theater, false, 'Docent normalizes native theater mode even with no panel selected');
 
   playlist = { querySelector: () => null };
