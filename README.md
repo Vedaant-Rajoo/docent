@@ -15,7 +15,20 @@ This is an alpha. It requires YouTube's dark theme and runs on `https://www.yout
 
 The home header keeps YouTube's Create and notifications controls when available to your account. Press `Cmd+K` on macOS or `Ctrl+K` elsewhere to focus search.
 
-## Install from source
+## Install
+
+[Install Docent from the Chrome Web Store](https://chromewebstore.google.com/detail/docent-for-youtube/jgacckehokmmgehdilofhbjdknipfcbg) for automatic updates.
+
+### Install without the Store
+
+1. Download `docent.zip` from [GitHub Releases](https://github.com/Vedaant-Rajoo/docent/releases).
+2. Extract it to a permanent folder. Open `chrome://extensions` and enable **Developer mode**.
+3. Choose **Load unpacked** and select the extracted folder containing `manifest.json`.
+4. Reload YouTube tabs and use YouTube's dark theme.
+
+Updates to unpacked installs are manual. Replace the files in the same folder, reload Docent at `chrome://extensions`, then reload YouTube tabs. Keep that folder in place while Docent is installed. This package targets desktop Chrome; other browsers have not been tested.
+
+### Install from source
 
 There is no build step.
 
