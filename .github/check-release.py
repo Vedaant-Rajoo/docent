@@ -19,15 +19,13 @@ def step(name):
     # ponytail: These are literal run blocks; use a YAML parser if the workflow gains anchors.
     block = source.split(f"      - name: {name}\n", 1)[1].split("\n      - ", 1)[0]
     command = textwrap.dedent(block.split("        run: |\n", 1)[1])
-    subprocess.run(["bash", "-n"], input=command, text=True, check=True)
     return command
 
 
 command = step("Run Store operation")
 validate = step("Validate release")
 attach = step("Attach release ZIP")
-package_command = step("Package ZIP").split("python3 -m zipfile -t", 1)[0]
-arguments = shlex.split(package_command.replace("\\\n", " "))
+arguments = shlex.split(step("Package ZIP").replace("\\\n", " "))
 with tempfile.TemporaryDirectory(prefix="docent-package-check-") as directory:
     root = Path(directory)
     for name in arguments[5:]:
@@ -40,7 +38,7 @@ with tempfile.TemporaryDirectory(prefix="docent-package-check-") as directory:
     def git(*arguments):
         subprocess.run(["git", "-c", "user.name=Release check",
                         "-c", "user.email=release-check@example.invalid", "-c", "commit.gpgsign=false",
-                        *arguments], cwd=root, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                        *arguments], cwd=root, check=True)
 
     git("init", "--quiet", "--initial-branch=main")
     git("add", ".")

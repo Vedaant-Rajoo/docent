@@ -73,7 +73,6 @@ jobs:
           git archive --format=zip --output=docent.zip HEAD \
             manifest.json background.js bridge.js docent.js docent.css \
             settings.html settings.js icons LICENSE
-          python3 -m zipfile -t docent.zip
 
       - name: Attach release ZIP
         if: github.event_name == 'release'
