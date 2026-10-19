@@ -7,6 +7,7 @@ html[data-docent] {
   --docent-muted: #9a9aa1;
   --docent-fill: rgba(255, 255, 255, .08);
   --docent-text: #d6d6da;
+  --docent-ring: #a9b8e8;
 
   &, & body, & ytd-app, & ytd-masthead { background: var(--docent-bg) !important; }
   /* YouTube frosts its header on some pages, home and search among them, and marks them with frosted-glass-mode.
@@ -14,7 +15,7 @@ html[data-docent] {
      column. On home, #frosted-glass also sits behind the pinned categories. Elsewhere the solid ytd-masthead
      covers #background. */
   & ytd-masthead[frosted-glass-mode]:not([frosted-glass-mode=none]) { background: transparent !important; }
-  & :is(ytd-masthead #background, #frosted-glass) { left: 64px !important; right: 0 !important; width: auto !important; background: rgba(12, 12, 14, .8) !important; backdrop-filter: blur(48px) !important; }
+  & :is(ytd-masthead #background, #frosted-glass) { left: 64px; right: 0; width: auto; background: color-mix(in srgb, var(--docent-bg) 80%, transparent) !important; }
   & :is(#cinematics, #cinematics-container, ytd-guide, ytd-mini-guide) { display: none !important; }
   & ytd-app { --app-drawer-width: 64px; --ytd-mini-guide-width: 64px; --ytd-persistent-guide-width: 64px; }
 
@@ -52,7 +53,7 @@ html[data-docent] {
   & .docent-icon { all: unset; flex: none; cursor: pointer; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 10px; color: var(--docent-text); }
   & .docent-icon:hover { background: var(--docent-fill); }
   & #docent-panels [aria-pressed=true] { background: #ededee; color: #141416; }
-  & :is(.docent-icon, ytd-masthead #end button):focus-visible { outline: 2px solid #a9b8e8; outline-offset: 2px; }
+  & :is(.docent-icon, ytd-masthead #end button):focus-visible { outline: 2px solid var(--docent-ring); outline-offset: 2px; }
 
   /* Icon rail */
   & #docent-logo { left: 14px; width: 36px; height: 36px; display: grid; place-items: center; }
@@ -138,7 +139,7 @@ html[data-docent] {
   & #docent-related-header button { padding: 6px; border-radius: 6px; }
   & .docent-menu-item { display: block; width: 100%; padding: 12px 16px; text-align: left; }
   & :is(.docent-menu-item, #docent-related-header button):hover { background: var(--docent-fill); }
-  & :is(.docent-menu-item, #docent-related-header button):focus-visible { outline: 2px solid #a9b8e8; outline-offset: -2px; }
+  & :is(.docent-menu-item, #docent-related-header button):focus-visible { outline: 2px solid var(--docent-ring); outline-offset: -2px; }
   @media (max-width: 1000px) {
     & ytd-watch-flexy #columns { display: flex !important; flex-direction: column !important; }
     & ytd-watch-flexy #primary { box-sizing: border-box; width: calc(100% - 32px) !important; min-width: 0 !important; max-width: none !important; margin: 0 16px !important; padding: 0 !important; }
@@ -173,7 +174,7 @@ html[data-docent] {
     /* YouTube's picture-in-picture button comes after fullscreen. Docent's own takes its place. */
     & .ytp-pip-button { display: none !important; }
     & .ytp-right-controls .ytp-button::before { border-radius: 8px; }
-    & .ytp-right-controls .ytp-button:focus-visible { outline: 2px solid #a9b8e8; outline-offset: -2px; border-radius: 8px; }
+    & .ytp-right-controls :is(.ytp-button:focus-visible, .docent-picker:has(:focus-visible)) { outline: 2px solid var(--docent-ring); outline-offset: -2px; border-radius: 8px; }
     & :is(.ytp-subtitles-button, .ytp-settings-button, .ytp-fullscreen-button) svg {
       background: currentColor; mask: var(--docent-glyph) center / var(--docent-glyph-size, 24px) no-repeat;
       & > * { display: none; }
@@ -189,9 +190,9 @@ html[data-docent] {
     &.ytp-fullscreen .ytp-fullscreen-button { --docent-glyph: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'><path d='M4 8h4V4M16 4v4h4M20 16h-4v4M8 20v-4H4'/></svg>"); }
     /* Speed and resolution are text, sized like YouTube's time display. Their select covers them. */
     & .docent-picker { position: relative; flex: none; display: flex; align-items: center; height: 40px; margin: auto 0; padding: 0 12px; border-radius: 8px; color: #fff; font-size: 14px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    /* The hover YouTube gives .ytp-button::before beside it. */
     & .docent-picker:hover { background: rgba(255, 255, 255, .1); }
-    & .docent-picker:has(select:focus-visible) { outline: 2px solid #a9b8e8; outline-offset: -2px; }
-    & .docent-picker select { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; color-scheme: dark; }
+    & .docent-picker select { position: absolute; inset: 0; opacity: 0; cursor: pointer; color-scheme: dark; }
   }
 
   /* Buttons under the video. YouTube's menu code re-measures this row on resize and moves Save and
@@ -204,8 +205,7 @@ html[data-docent] {
      the Like/Dislike divider, which YouTube draws on the Like button. */
   &:not([data-docent-dislike]) ytd-watch-metadata {
     & dislike-button-view-model { display: none !important; }
-    & like-button-view-model button { border-radius: 999px !important; }
-    & like-button-view-model button::after { display: none !important; }
+    & like-button-view-model button { border-radius: 999px !important; &::after { display: none !important; } }
   }
   & ytd-watch-metadata like-button-view-model button[aria-pressed=true] { color: #3ea6ff !important; background: rgba(62, 166, 255, .14) !important; }
 
