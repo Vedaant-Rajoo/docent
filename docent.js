@@ -347,9 +347,18 @@ document.addEventListener('timeupdate', () => {
   }
 }, true);
 
+// When search results load, YouTube moves focus from the search box to its guide button, which closes the
+// suggestions. Docent hides that button, so blur the search box itself or the suggestions stay open.
+document.addEventListener('yt-navigate-finish', event => {
+  if (event.detail?.pageType !== 'search' || !document.documentElement.hasAttribute('data-docent')) return;
+  $('yt-searchbox input.ytSearchboxComponentInput')?.blur();
+});
+
 addEventListener('keydown', event => {
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k' && document.documentElement.hasAttribute('data-docent')) {
     event.preventDefault();
-    $('yt-searchbox input.ytSearchboxComponentInput')?.focus();
+    const search = $('yt-searchbox input.ytSearchboxComponentInput');
+    if (search === document.activeElement) search.blur();
+    else search?.focus();
   }
 }, true);

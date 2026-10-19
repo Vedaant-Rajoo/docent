@@ -13,7 +13,7 @@ This is an alpha. It requires YouTube's dark theme and runs on `https://www.yout
 - Player controls include a speed button that cycles through 1×, 1.25×, 1.5×, and 2×, plus a resolution list using the qualities YouTube provides. YouTube's autoplay toggle and settings remain available.
 - Theater mode hides the watch column. Fullscreen shows only the player.
 
-The home header keeps YouTube's Create and notifications controls when available to your account. Press `Cmd+K` on macOS or `Ctrl+K` elsewhere to focus search.
+The home header keeps YouTube's Create and notifications controls when available to your account. Press `Cmd+K` on macOS or `Ctrl+K` elsewhere to focus search, and press it again to leave search.
 
 ## Install
 

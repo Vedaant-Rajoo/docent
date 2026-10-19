@@ -7,7 +7,13 @@ html[data-docent] {
   --docent-muted: #9a9aa1;
   --docent-fill: rgba(255, 255, 255, .08);
 
-  &, & body, & ytd-app, & ytd-masthead, & ytd-masthead #background { background: var(--docent-bg) !important; }
+  &, & body, & ytd-app, & ytd-masthead { background: var(--docent-bg) !important; }
+  /* YouTube frosts its header on some pages, home and search among them, and marks them with frosted-glass-mode.
+     Docent keeps that glass in its own colour and starts it after the rail, so the logo and rail stay one solid
+     column. On home, #frosted-glass also sits behind the pinned categories. Elsewhere the solid ytd-masthead
+     covers #background. */
+  & ytd-masthead[frosted-glass-mode]:not([frosted-glass-mode=none]) { background: transparent !important; }
+  & :is(ytd-masthead #background, #frosted-glass) { left: 64px !important; right: 0 !important; width: auto !important; background: rgba(12, 12, 14, .8) !important; backdrop-filter: blur(48px) !important; }
   & #cinematics, & #cinematics-container { display: none !important; }
   & :is(ytd-guide, ytd-mini-guide) { display: none !important; }
   & ytd-app { --app-drawer-width: 64px; --ytd-mini-guide-width: 64px; --ytd-persistent-guide-width: 64px; }
@@ -60,8 +66,6 @@ html[data-docent] {
 
   /* Home categories keep YouTube's scrolling and selection behavior. */
   & ytd-browse[page-subtype=home] ytd-feed-filter-chip-bar-renderer {
-    background: var(--docent-bg) !important;
-    & #chips-content { background: var(--docent-bg) !important; }
     & yt-chip-cloud-chip-renderer { margin-right: 8px !important; }
     & :is(yt-chip-cloud-chip-renderer:not(:has(chip-shape)), .ytChipShapeInactive, .ytChipShapeInactiveRedesign, .ytChipShapeActive, .ytChipShapeActiveRedesign) {
       box-sizing: border-box; height: 32px !important; padding: 0 14px !important; border: 1px solid rgba(255, 255, 255, .1) !important;
@@ -71,9 +75,13 @@ html[data-docent] {
     & :is(yt-chip-cloud-chip-renderer:not([selected]):not(:has(chip-shape)), .ytChipShapeInactive, .ytChipShapeInactiveRedesign):hover { background: var(--docent-fill) !important; color: #f1f1f1 !important; }
     & :is(yt-chip-cloud-chip-renderer[selected]:not(:has(chip-shape)), .ytChipShapeActive, .ytChipShapeActiveRedesign) { background: #ededee !important; border-color: #ededee !important; color: #141416 !important; }
     & yt-chip-cloud-chip-renderer:is(:focus-visible, :has(:focus-visible)) { outline: 2px solid #ededee; outline-offset: 3px; border-radius: 999px; }
-    & :is(#left-arrow, #right-arrow) { background: var(--docent-bg) !important; }
-    & #left-arrow::after { background: linear-gradient(to right, var(--docent-bg), transparent) !important; }
-    & #right-arrow::before { background: linear-gradient(to left, var(--docent-bg), transparent) !important; }
+    /* Solid behind the categories, unless YouTube pins them on its frosted header. There it leaves them
+       see-through and drops the arrow fades. */
+    &:not([frosted-glass-mode=with-chipbar]) {
+      &, & #chips-content, & :is(#left-arrow, #right-arrow) { background: var(--docent-bg) !important; }
+      & #left-arrow::after { background: linear-gradient(to right, var(--docent-bg), transparent) !important; }
+      & #right-arrow::before { background: linear-gradient(to left, var(--docent-bg), transparent) !important; }
+    }
   }
 
   /* The selected component uses the column. Ordinary videos start without one, and so does every load
