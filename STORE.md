@@ -92,7 +92,7 @@ Contributors open PRs and the **Checks** job runs automatically. The `main` rule
 To publish a new version:
 
 1. Increase `manifest.json`'s version and merge the reviewed changes to `main`.
-2. Create a GitHub Release with a matching tag, such as `v0.1.1` for version `0.1.1`. Target a commit on `main`; GitHub can generate the release notes.
+2. Create a GitHub Release with a matching tag, such as `v0.1.2` for version `0.1.2`. Target a commit on `main`; GitHub can generate the release notes.
 3. Publish the release. The workflow validates the version and commit, checks the extension, builds `docent.zip` from the tagged files, and attaches it to the release.
 4. For a stable release, the workflow uploads that same ZIP and submits it to Google. Google publishes it after approval using the existing distribution settings. A GitHub pre-release gets the ZIP only. Use the pre-release checkbox with a numeric tag; Chrome versions do not accept suffixes such as `-beta`.
 
