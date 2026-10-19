@@ -66,7 +66,7 @@ Treat bug reports as public. Remove account details, private video links, and pe
 
 ## Check a change
 
-With Node.js installed, run this from the repository:
+With Node.js 26 installed, run this from the repository:
 
 ```sh
 node check.js
