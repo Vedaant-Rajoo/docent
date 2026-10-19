@@ -1,6 +1,6 @@
 # Chrome Web Store submission
 
-These fields describe the `0.1.0` code in this repository. Check them again if a release changes what Docent reads, saves, or sends.
+These fields describe the code in this repository. Check them again if a release changes what Docent reads, saves, or sends.
 
 ## Single purpose description
 
@@ -60,8 +60,6 @@ Privacy policy: <https://github.com/Vedaant-Rajoo/docent/blob/main/PRIVACY.md>
 
 Support: <https://github.com/Vedaant-Rajoo/docent/issues>
 
-The policy file must be committed and reachable without signing in before using that URL in the Store. If the repository stays private, host the same policy on a public HTTPS page and use that address instead. Check that Issues is available to testers too.
-
 ## Reviewer instructions
 
 1. Open desktop `https://www.youtube.com/` and choose YouTube's dark theme. Docent stays inactive in the light theme.
@@ -81,8 +79,6 @@ The initial release is [published in the Chrome Web Store](https://chromewebstor
 - Google Cloud project number: `546702080528`
 - Service account: `docent-publisher@docent-publisher.iam.gserviceaccount.com`
 
-The project ID and project number were verified in Google Cloud Console.
-
 ### Keyless authentication
 
 The [identity pool](https://console.cloud.google.com/iam-admin/workload-identity-pools/pool/docent-github?project=docent-publisher) and service account binding are configured. The provider is `projects/546702080528/locations/global/workloadIdentityPools/docent-github/providers/github`. It accepts GitHub's OIDC issuer for repository ID `1422969692`, owner ID `33187221`, and `.github/workflows/release.yml`. Publishing is limited to the repository owner's manual runs on `main` and release events on protected `v*` tags. PR jobs have read-only permissions and cannot authenticate to Google Cloud. The service account grants `roles/iam.workloadIdentityUser` to that repository in the pool.
@@ -91,7 +87,7 @@ The IAM Service Account Credentials, Security Token Service, and Chrome Web Stor
 
 ### Run a release
 
-Once `.github/workflows/release.yml` is committed to `main`, contributors open PRs and the **Checks** job runs automatically. The `main` ruleset requires passing checks and one approving review; the repository owner can bypass it. Release tags matching `v*` can only be created, updated, or deleted by the owner. Add other trusted maintainers to the rulesets, workflow guard, and Cloud trust when needed.
+Contributors open PRs and the **Checks** job runs automatically. The `main` ruleset requires passing checks and one approving review; the repository owner can bypass it. Release tags matching `v*` can only be created, updated, or deleted by the owner. Add other trusted maintainers to the rulesets, workflow guard, and Cloud trust when needed.
 
 To publish a new version:
 

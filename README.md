@@ -30,17 +30,11 @@ Updates to unpacked installs are manual. Replace the files in the same folder, r
 
 ### Install from source
 
-There is no build step.
+There is no build step. Clone the repository, then follow steps 2 to 4 above with the cloned `docent` folder.
 
-1. Clone the repository:
-
-   ```sh
-   git clone https://github.com/Vedaant-Rajoo/docent.git
-   ```
-
-2. Open `chrome://extensions` in Chrome and turn on **Developer mode**.
-3. Choose **Load unpacked** and select the `docent` folder containing `manifest.json`.
-4. Reload any open YouTube tabs. Set YouTube's Appearance to **Dark theme** if the layout does not appear.
+```sh
+git clone https://github.com/Vedaant-Rajoo/docent.git
+```
 
 After updating the source files, click Reload on Docent's card at `chrome://extensions`, then reload YouTube.
 
