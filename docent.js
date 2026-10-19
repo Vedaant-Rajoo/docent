@@ -1,7 +1,7 @@
 // Docent adds a minimal shell across YouTube and reworks the watch page around its video.
 // docent.css restyles YouTube's own nodes while <html> has data-docent. This file sets that
 // attribute while enabled and adds Docent's own nodes. YouTube re-renders and re-measures
-// its nodes, so Docent hides and restyles them but never moves them.
+// its nodes, so Docent hides and restyles them without moving them.
 //
 // This file runs in the page's main world because the player API (setPlaybackRate,
 // getAvailableQualityData) lives there. YouTube enforces Trusted Types in that world, so innerHTML
@@ -55,8 +55,8 @@ let restoreWatch = () => {};
 let guide;
 
 // Links to the channels in the guide's subscriptions section, which YouTube orders by recent
-// activity. Channels with new videos get a dot. The section nests the channels past the first
-// few inside a "Show more" entry, so collect channel entries at any depth.
+// activity. Channels with new videos get a dot. YouTube nests the channels past the first few
+// inside a "Show more" entry, so this collects channel entries at any depth.
 const subscriptions = data => {
   const entries = [];
   const collect = node => {
@@ -155,7 +155,7 @@ function setup(tries = 0) {
   );
   $('yt-searchbox')?.append(el('kbd', { id: 'docent-kbd', textContent: /Mac/.test(navigator.platform) ? '⌘K' : 'Ctrl K' }));
 
-  // Icon rail: YouTube's logo on top, then the library, then the subscriptions once the guide loads
+  // Icon rail: YouTube's logo on top, the library, the subscriptions once the guide loads, then settings
   const channels = el('div', { id: 'docent-subscriptions', role: 'group', ariaLabel: 'Subscriptions' });
   const rail = el('nav', { id: 'docent-rail', ariaLabel: 'Library' },
     iconLink('home', 'Home', '/'),
@@ -211,8 +211,8 @@ function setup(tries = 0) {
     const target = opener?.checkVisibility() ? opener : $('#movie_player');
     if (focused || document.activeElement === document.body) target?.focus({ preventScroll: true });
   };
-  // A click inside the mutation callback is lost, and YouTube drops [theater] about 50ms after the one that
-  // works, so click once per change, in the next frame.
+  // A click inside the mutation callback is lost, and YouTube drops [theater] about 50ms after the
+  // click that works. So click once per change, in the next frame.
   const reveal = () => {
     if (watch.hasAttribute('theater') && !inFullscreen()) requestAnimationFrame(() => {
       if (watch.hasAttribute('theater') && !inFullscreen()) $('.ytp-size-button')?.click();
@@ -370,11 +370,12 @@ document.addEventListener('ratechange', syncPlayer, true);
 
 // YouTube stops scrolling the transcript along with the video once the reader scrolls it. Docent
 // scrolls the active row back into view whenever the pointer is off the transcript. The rows sit
-// in nested overflow boxes, so scroll the nearest one that actually scrolls.
+// in nested overflow boxes, so scroll the nearest one that can scroll.
 document.addEventListener('timeupdate', () => {
   // Fullscreen hides #panels (docent.css), so the visibility check below covers it.
   if (!settings?.autoScroll || document.documentElement.dataset.docentPanel !== 'native') return;
-  // The active row in either transcript layout: transcript-segment-view-model or the older ytd-transcript-segment-renderer.
+  // The active row in either transcript layout, transcript-segment-view-model or the older
+  // ytd-transcript-segment-renderer.
   const panel = $('#panels > [data-docent-native]');
   const row = panel?.querySelector('.ytwTranscriptSegmentViewModelHostActive, ytd-transcript-segment-renderer.active');
   if (!row?.checkVisibility() || panel.matches(':hover')) return;

@@ -31,7 +31,7 @@ const guide = { items: [
   ] } },
 ] };
 
-// Array.from copies the result out of the vm's realm, whose Array prototype deepStrictEqual rejects.
+// deepStrictEqual rejects the vm realm's Array prototype, so Array.from copies the result into this realm.
 const links = Array.from(subscriptions(guide), link => [link.title, link.href, link.className, link.children[0].src]);
 assert.deepStrictEqual(links, [
   ['A', '/channel/UCa', 'docent-icon docent-new', 'https://yt3.ggpht.com/UCa'],
@@ -80,7 +80,8 @@ async function check() {
   assert.strictEqual(badge.title, 'Disable Docent');
   assert.strictEqual(badge.text, '');
 
-  // A click turns off globally. Two rapid clicks must both count, not read the same stale value.
+  // A click turns off globally. Two rapid clicks must both count. The second must not read the same
+  // stale value as the first.
   chrome.action.onClicked.fire();
   await vm.runInContext('toggles', background);
   assert.strictEqual(badge.text, 'OFF');
