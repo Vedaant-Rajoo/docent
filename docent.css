@@ -161,7 +161,7 @@ html[data-docent] {
   /* Player: rounded corners, fewer buttons, and the big play button whenever the video is paused */
   & ytd-player#ytd-player, & #ytd-player #container { border-radius: 16px !important; }
   & .ytp-size-button { display: none !important; }
-  & :is(.ytp-next-button, .ytp-pip-button) { display: block !important; }
+  & .ytp-next-button { display: block !important; }
   & .html5-video-player.paused-mode:not(.ad-showing) .ytp-cued-thumbnail-overlay { display: block !important; background: none !important; }
   & .html5-video-player.paused-mode .ytp-cued-thumbnail-overlay-image { display: none !important; }
   /* A quiet bar on the watch page: YouTube's own bottom gradient instead of a pill behind each group. The
@@ -171,7 +171,7 @@ html[data-docent] {
     &:not(.ytp-hide-controls) .ytp-gradient-bottom { display: block; }
     & .ytp-chrome-controls :is(.ytp-play-button, .ytp-next-button, .ytp-volume-area, .ytp-time-wrapper, .ytp-chapter-title, .ytp-right-controls) { background: none; backdrop-filter: none; }
     /* YouTube's picture-in-picture button comes after fullscreen. Docent's own takes its place. */
-    & .ytp-pip-button, & .docent-pip[hidden] { display: none !important; }
+    & .ytp-pip-button { display: none !important; }
     & .ytp-right-controls .ytp-button::before { border-radius: 8px; }
     & .ytp-right-controls .ytp-button:focus-visible { outline: 2px solid #a9b8e8; outline-offset: -2px; border-radius: 8px; }
     & :is(.ytp-subtitles-button, .ytp-settings-button, .ytp-fullscreen-button) svg {

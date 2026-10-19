@@ -344,10 +344,15 @@ async function check() {
   assert.deepStrictEqual(shown(quality), ['1080p', 'auto', 'Video resolution: Auto (1080p)'], 'Auto shows the resolution playing now');
   speed.value = '1.5';
   page.activeElement = speed;
+  speed.onpointerdown();
   speed.onchange();
   assert.strictEqual(player.rate, 1.5);
   assert.deepStrictEqual(shown(speed), ['1.5×', '1.5', 'Playback speed: 1.5×']);
-  assert.strictEqual(page.activeElement, page.body, 'a choice hands the keyboard back to YouTube');
+  assert.strictEqual(page.activeElement, page.body, 'a mouse pick hands the keyboard back to YouTube');
+  page.activeElement = speed;
+  speed.value = '1';
+  speed.onchange();
+  assert.strictEqual(page.activeElement, speed, 'a keyboard change keeps focus in the picker');
   player.rate = 1.05;
   page.dispatchEvent(new Event('ratechange'));
   assert.deepStrictEqual(Array.from(speed.options, option => option.value), ['0.25', '0.5', '1', '1.05', '1.5', '2'], 'a custom speed from YouTube joins the list');
@@ -378,7 +383,6 @@ async function check() {
   panelObserver.callback();
   assert.strictEqual(optionWrites + textWrites, optionsBefore, 'an unchanged player must not wake the observer again');
   const pip = created.find(element => element.className === 'ytp-button docent-pip');
-  assert.strictEqual(pip.hidden, false);
   assert.strictEqual(pip.ariaLabel, 'Picture-in-picture');
   pip.onclick();
   assert.strictEqual(player.pip, true, 'picture-in-picture goes through the player API');

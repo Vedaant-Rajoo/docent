@@ -75,14 +75,19 @@ const subscriptions = data => {
 
 // The player's speed and resolution pickers: a native select laid over the value it shows, so the
 // bar reads "1×" or "1080p" while the browser's own list offers the choices.
-const picker = (id, label, choose) => el('span', { className: 'docent-picker' },
-  el('span', { ariaHidden: 'true' }),
-  el('select', { id, ariaLabel: label, onchange() {
-    choose($('#movie_player'), this.value);
-    syncPlayer();
-    // Blur after picking so YouTube's keyboard shortcuts reach the player again.
-    this.blur();
-  } }));
+const picker = (id, label, choose) => {
+  let pointer = false;
+  return el('span', { className: 'docent-picker' },
+    el('span', { ariaHidden: 'true' }),
+    el('select', { id, ariaLabel: label, onpointerdown() { pointer = true; }, onchange() {
+      choose($('#movie_player'), this.value);
+      syncPlayer();
+      // A mouse pick hands the keyboard back to YouTube's shortcuts. On Windows and Linux each arrow press
+      // on a closed select is a change, so blurring then would send the next arrow to the player.
+      if (pointer) this.blur();
+      pointer = false;
+    } }));
+};
 // Writes only what changed. The watch page's observer runs this, and every write would run it again.
 const fillPicker = (select, choices, value, text) => {
   if (String([...select.options].map(option => [option.textContent, option.value])) !== String(choices)) {
@@ -291,7 +296,7 @@ function setup(tries = 0) {
   // observer below puts them back.
   const speed = picker('docent-speed', 'Playback speed', (current, rate) => current.setPlaybackRate(Number(rate)));
   const quality = picker('docent-quality', 'Video resolution', (current, value) => current.setPlaybackQualityRange(value));
-  const pip = el('button', { type: 'button', className: 'ytp-button docent-pip', title: 'Picture-in-picture', ariaLabel: 'Picture-in-picture', hidden: !document.pictureInPictureEnabled, onclick: () => $('#movie_player').togglePictureInPicture() },
+  const pip = el('button', { type: 'button', className: 'ytp-button docent-pip', title: 'Picture-in-picture', ariaLabel: 'Picture-in-picture', onclick: () => $('#movie_player').togglePictureInPicture() },
     svg('svg', { viewBox: '0 0 24 24', width: 24, height: 24, fill: 'none', stroke: 'currentColor', 'stroke-width': 1.7, 'stroke-linejoin': 'round' },
       svg('rect', { x: 3, y: 5, width: 18, height: 14, rx: 2 }),
       svg('rect', { x: 12, y: 11, width: 7, height: 6, rx: .8, fill: 'currentColor', stroke: 'none' })));
@@ -301,7 +306,7 @@ function setup(tries = 0) {
     if (controls && !controls.contains(speed)) {
       controls.insertBefore(speed, controls.querySelector(':scope > .ytp-subtitles-button'));
       speed.after(quality);
-      controls.insertBefore(pip, controls.querySelector(':scope > .ytp-settings-button'));
+      if (document.pictureInPictureEnabled) controls.insertBefore(pip, controls.querySelector(':scope > .ytp-settings-button'));
       // The player keeps its listeners across in-app navigation, so add this one once per player.
       if (!listening.has(current)) {
         listening.add(current);
