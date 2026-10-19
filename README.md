@@ -8,10 +8,10 @@ This is an alpha. It requires YouTube's dark theme and runs on `https://www.yout
 
 - A compact header and navigation rail on the home and watch pages. The rail includes library links and subscribed channels. Home categories keep YouTube's filters, with simpler styling.
 - One watch panel at a time. Open Ask, chapters, transcripts, or comments through YouTube's own controls when available. A Recommended button in the header opens video recommendations.
-- Native live chat and playlists use the same space. When available, you can return to them through the video's More actions menu.
+- Live streams and videos with chat replay get a chat button in the header. Press a panel button to show or hide it; choosing another replaces the open panel. Playlists remain available through the video's More actions menu.
 - The transcript follows the current line during playback. Hover over the transcript to read without automatic scrolling.
-- Player controls include a speed button that cycles through 1×, 1.25×, 1.5×, and 2×, plus a resolution list using the qualities YouTube provides. YouTube's autoplay toggle and settings remain available.
-- Theater mode hides the watch column. Fullscreen shows only the player.
+- A quieter player bar shows the current speed and resolution, each a list of the choices YouTube offers, followed by captions, picture-in-picture, YouTube's settings, and fullscreen. YouTube's autoplay toggle remains available.
+- Closing the watch column gives the video its full width. The separate theater control is hidden. Fullscreen shows only the player.
 
 The home header keeps YouTube's Create and notifications controls when available to your account. Press `Cmd+K` on macOS or `Ctrl+K` elsewhere to focus search, and press it again to leave search.
 

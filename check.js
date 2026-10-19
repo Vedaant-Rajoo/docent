@@ -1,11 +1,13 @@
-// Self-check for settings, the extension toggle, and native panel ownership:
+// Self-check for settings, the extension toggle, native panel ownership, and the player bar:
 //   node check.js
 // Uses Node's stdlib and a stub DOM; it does not replace visual checks against YouTube.
 const assert = require('node:assert');
 const fs = require('node:fs');
 const vm = require('node:vm');
 
-const node = () => ({ dataset: {}, children: [], append(...children) { this.children.push(...children); } });
+const node = () => ({ dataset: {}, children: [], append(...children) {
+  for (const child of children) this.children.push(Object.assign(child, { parentNode: this, previousSibling: this.children.at(-1) }));
+} });
 const context = vm.createContext({
   document: { createElement: node, createElementNS: node, addEventListener() {}, dispatchEvent() {} },
   Event,
@@ -137,6 +139,7 @@ async function checkSettings() {
   const observers = [], frames = [];
   const main = vm.createContext({
     document: page, Event, CustomEvent, location: { pathname: '/watch' }, clearTimeout,
+    Option: class { constructor(text, value) { this.textContent = text; this.value = String(value); } get text() { return this.textContent; } },
     addEventListener() {}, dispatchEvent() { resized++; },
     requestAnimationFrame: callback => frames.push(callback),
     MutationObserver: class { constructor(callback) { this.callback = callback; observers.push(this); } observe() { this.connected = true; } disconnect() { this.connected = false; } },
@@ -156,6 +159,14 @@ async function checkSettings() {
 
   // Home has no player or watch metadata. Repeated toggles must create exactly one shell.
   const created = [];
+  // Moves an element under a parent, as the DOM does: an element has one place at a time.
+  const place = (parent, element, index = parent.children.length) => {
+    const siblings = element.parentNode?.children;
+    if (siblings?.includes(element)) siblings.splice(siblings.indexOf(element), 1);
+    parent.children.splice(Math.min(index, parent.children.length), 0, element);
+    element.parentNode = parent;
+  };
+  let optionWrites = 0;
   page.createElement = tag => {
     const element = node();
     element.tagName = tag.toUpperCase();
@@ -163,8 +174,23 @@ async function checkSettings() {
     element.isConnected = true;
     element.checkVisibility = () => element.isConnected;
     element.focus = () => { page.activeElement = element; };
-    element.remove = () => { element.isConnected = false; created.splice(created.indexOf(element), 1); };
+    element.blur = () => { if (page.activeElement === element) page.activeElement = page.body; };
+    element.remove = () => {
+      element.isConnected = false;
+      created.splice(created.indexOf(element), 1);
+      const siblings = element.parentNode?.children;
+      if (siblings?.includes(element)) siblings.splice(siblings.indexOf(element), 1);
+    };
     element.insertBefore = (child, before) => element.children.splice(element.children.indexOf(before), 0, child);
+    element.after = (...elements) => elements.forEach((next, offset) => place(element.parentNode, next, element.parentNode.children.indexOf(element) + 1 + offset));
+    if (tag === 'select') {
+      element.selectedIndex = -1;
+      Object.defineProperties(element, {
+        options: { get: () => element.children },
+        value: { get: () => element.children[element.selectedIndex]?.value ?? '', set: value => { element.selectedIndex = element.children.findIndex(option => option.value === String(value)); } },
+      });
+      element.replaceChildren = (...options) => { element.children = options; element.selectedIndex = options.length ? 0 : -1; optionWrites++; };
+    }
     created.push(element);
     return element;
   };
@@ -207,7 +233,24 @@ async function checkSettings() {
   const ads = makePanel('engagement-panel-ads');
   ads.setAttribute('visibility', 'ENGAGEMENT_PANEL_VISIBILITY_EXPANDED');
   const watch = new EventTarget();
-  let videoId = 'native-panel-test', chat, playlist, theater = false, menuClosed = 0;
+  let videoId = 'native-panel-test', dataVideoId, chatInfo, chat, playlist, theater = false, menuClosed = 0, chatCollapsed = true, chatRequests = 0;
+  const cards = ['WATCH_UI_TEASER_TYPE_LIVE_CHAT', 'WATCH_UI_TEASER_TYPE_CHAPTERS'].map(teaserType => {
+    const attributes = new Set();
+    return {
+      data: { teaserType }, hasAttribute: key => attributes.has(key),
+      toggleAttribute: (key, on) => on ? attributes.add(key) : attributes.delete(key),
+      removeAttribute: key => attributes.delete(key),
+    };
+  });
+  Object.defineProperty(watch, 'data', { get: () => ({
+    currentVideoEndpoint: { watchEndpoint: { videoId: dataVideoId ?? videoId } },
+    contents: { twoColumnWatchNextResults: { conversationBar: chatInfo ? { liveChatRenderer: chatInfo } : undefined } },
+  }) });
+  const chatFocus = { focus: () => { page.activeElement = chatFocus; } };
+  const chatContainer = {
+    contains: element => element === chatFocus,
+    querySelector: () => chat ? chatFocus : null,
+  };
   const menu = {};
   const trigger = {
     isConnected: true, checkVisibility: () => true, focus: () => { page.activeElement = trigger; },
@@ -221,31 +264,61 @@ async function checkSettings() {
   };
   const related = {
     children: [], prepend: child => related.children.unshift(child),
+    contains: element => related.children.some(header => header.children.includes(element)),
     querySelector: selector => selector === '#docent-related-header' ? related.children[0]
-      : selector === 'h2' ? related.children[0]?.children[0] : null,
+      : selector === 'h2, button, iframe' ? related.children[0]?.children[0] : null,
   };
   const popup = {
     closest: selector => selector === 'ytd-menu-popup-renderer' ? popup : { close: () => { menuClosed++; } },
     querySelector: selector => selector === '#items' ? items : null,
   };
+  // YouTube's player: the right-hand controls Docent joins and the API its pickers read.
+  const makePlayer = () => {
+    const controls = { children: ['ytp-autonav-toggle', 'ytp-subtitles-button', 'ytp-settings-button'].map(className => ({ className })) };
+    controls.contains = element => controls.children.includes(element);
+    controls.insertBefore = (element, before) => place(controls, element, before ? controls.children.indexOf(before) : undefined);
+    controls.querySelector = selector => controls.children.find(child => selector === `:scope > .${child.className}`) ?? null;
+    const player = {
+      controls, listeners: [], rate: 1, rates: [0.25, 0.5, 1, 1.5, 2], preferred: 'auto', playing: 'hd1080',
+      qualities: [{ quality: 'hd2160', qualityLabel: '2160p', isPlayable: false }, { quality: 'hd1080', qualityLabel: '1080p', isPlayable: true }, { quality: 'hd720', qualityLabel: '720p', isPlayable: true }],
+      querySelector: selector => selector === '.ytp-right-controls-left' ? controls : null,
+      addEventListener: (type, listener) => player.listeners.push([type, listener]),
+      focus() {},
+      getPlaybackRate: () => player.rate, setPlaybackRate: rate => { player.rate = rate; }, getAvailablePlaybackRates: () => player.rates,
+      getAvailableQualityData: () => player.qualities, getPreferredQuality: () => player.preferred, getPlaybackQuality: () => player.playing,
+      getPlaybackQualityLabel: () => player.qualities.find(option => option.quality === player.playing)?.qualityLabel ?? '',
+      setPlaybackQualityRange: quality => { player.preferred = quality; },
+      togglePictureInPicture: () => { player.pip = !player.pip; },
+    };
+    return player;
+  };
+  let player = makePlayer();
+  const bar = () => player.controls.children.map(child => child.children?.[1]?.id ?? child.className);
+  const fullBar = ['ytp-autonav-toggle', 'docent-speed', 'docent-quality', 'ytp-subtitles-button', 'ytp-button docent-pip', 'ytp-settings-button'];
+  page.pictureInPictureEnabled = true;
   watch.getAttribute = key => key === 'video-id' ? videoId : null;
   watch.hasAttribute = key => key === 'theater' && theater;
   watch.contains = element => element === trigger;
   watch.querySelector = selector => {
     if (selector === '#panels') return panels;
     if (selector === '#secondary') return { contains: element => related.children.some(header => header.children.includes(element)) };
-    if (selector === '#chat-container ytd-live-chat-frame:not(:has(ytd-message-renderer))') return chat;
+    if (selector === '#chat-container') return chatInfo ? chatContainer : null;
+    if (selector === '#chat-container ytd-live-chat-frame') return chat;
     if (selector === '#playlist:not([hidden])') return playlist;
     if (selector === 'ytd-watch-metadata #actions ytd-menu-renderer') return menu;
     if (selector === '#related') return related;
     return null;
   };
-  watch.querySelectorAll = () => panels.children.filter(panel => panel.getAttribute('visibility') === 'ENGAGEMENT_PANEL_VISIBILITY_EXPANDED');
+  watch.querySelectorAll = selector => selector === 'ytd-watch-metadata yt-carousel-item-view-model' ? cards
+    : selector === '[data-docent-chat-entry]' ? cards.filter(card => card.hasAttribute('data-docent-chat-entry'))
+    : panels.children.filter(panel => panel.getAttribute('visibility') === 'ENGAGEMENT_PANEL_VISIBILITY_EXPANDED');
   page.querySelector = selector => {
     if (selector === 'ytd-masthead') return {};
     if (selector === 'ytd-watch-flexy') return watch;
     if (selector === 'ytd-watch-flexy[theater], ytd-watch-flexy[fullscreen]') return theater ? watch : null;
     if (selector === '.ytp-size-button') return { click: () => { theater = !theater; } };
+    if (selector === '#movie_player') return player;
+    if (selector.startsWith('#docent-')) return created.find(element => element.id === selector.slice(1)) ?? null;
     return null;
   };
   page.querySelectorAll = selector => selector === '[data-docent-node]' ? created.filter(element => 'docentNode' in element.dataset)
@@ -259,6 +332,16 @@ async function checkSettings() {
     Object.defineProperty(event, 'target', { value: panel });
     watch.dispatchEvent(event);
   };
+  const notifyChat = (collapsed, target = chat) => {
+    if (target === chat) chatCollapsed = collapsed;
+    const event = new CustomEvent('yt-chat-collapsed-changed', { detail: collapsed });
+    Object.defineProperty(event, 'target', { value: target });
+    watch.dispatchEvent(event);
+  };
+  watch.toggleLiveChatPanel = collapsed => {
+    chatRequests++;
+    if (chat) notifyChat(collapsed);
+  };
   const openMenu = () => {
     const event = new Event('click');
     Object.defineProperty(event, 'target', { value: trigger });
@@ -271,12 +354,70 @@ async function checkSettings() {
   setPage(true);
   const panelObserver = observers.at(-1);
   const recommended = created.find(element => element.id === 'docent-recommended');
+  const chatButton = created.find(element => element.id === 'docent-chat');
+  assert.strictEqual(chatButton.hidden, true, 'ordinary videos have no chat glyph');
+  assert.strictEqual(chatButton.ariaPressed, 'false');
   assert.strictEqual(recommended.ariaLabel, 'Recommended videos');
   assert.strictEqual(recommended.ariaControls, 'related');
   assert.strictEqual(recommended.ariaPressed, 'false');
   assert.strictEqual(created.filter(element => element.id === 'docent-recommended').length, 1);
   assert.strictEqual(page.documentElement.dataset.docentPanel, 'none', 'ordinary videos start without a column, ignoring legacy defaults and ads');
-  assert.strictEqual(created.some(element => ['docent-panels', 'docent-search', 'docent-captions', 'docent-ask', 'docent-chapters', 'docent-transcript', 'docent-notes'].includes(element.id)), false);
+  assert.strictEqual(created.find(element => element.id === 'docent-panels').children.length, 2, 'only chat and recommendations belong in the panel bar');
+  assert.strictEqual(created.some(element => ['docent-search', 'docent-captions', 'docent-ask', 'docent-chapters', 'docent-transcript', 'docent-notes'].includes(element.id)), false);
+
+  // The player bar: speed and resolution pickers show what the player offers and plays, follow changes
+  // made elsewhere, and set the player through its API.
+  assert.deepStrictEqual(bar(), fullBar, 'speed and resolution precede captions; picture-in-picture precedes settings');
+  const speed = created.find(element => element.id === 'docent-speed');
+  const quality = created.find(element => element.id === 'docent-quality');
+  const shown = select => [select.previousSibling.textContent, select.value, select.parentNode.title];
+  assert.deepStrictEqual(Array.from(speed.options, option => option.value), ['0.25', '0.5', '1', '1.5', '2']);
+  assert.deepStrictEqual(shown(speed), ['1×', '1', 'Playback speed: 1×']);
+  assert.deepStrictEqual(Array.from(quality.options, option => option.textContent), ['1080p', '720p', 'Auto (1080p)'], 'only playable qualities are offered');
+  assert.deepStrictEqual(shown(quality), ['1080p', 'auto', 'Video resolution: Auto (1080p)'], 'Auto shows the resolution playing now');
+  speed.value = '1.5';
+  page.activeElement = speed;
+  speed.onchange();
+  assert.strictEqual(player.rate, 1.5);
+  assert.deepStrictEqual(shown(speed), ['1.5×', '1.5', 'Playback speed: 1.5×']);
+  assert.strictEqual(page.activeElement, page.body, 'a choice hands the keyboard back to YouTube');
+  player.rate = 1.05;
+  page.dispatchEvent(new Event('ratechange'));
+  assert.deepStrictEqual(Array.from(speed.options, option => option.value), ['0.25', '0.5', '1', '1.05', '1.5', '2'], 'a custom speed from YouTube joins the list');
+  assert.deepStrictEqual(shown(speed), ['1.05×', '1.05', 'Playback speed: 1.05×']);
+  player.preferred = 'hd720';
+  panelObserver.callback();
+  assert.deepStrictEqual(shown(quality), ['720p', 'hd720', 'Video resolution: 720p'], 'YouTube\'s menu changes the preference without an event');
+  quality.value = 'auto';
+  quality.onchange();
+  assert.strictEqual(player.preferred, 'auto');
+  assert.strictEqual(player.listeners.length, 1);
+  const [[qualityEvent, onQuality]] = player.listeners;
+  assert.strictEqual(qualityEvent, 'onPlaybackQualityChange');
+  player.playing = 'hd720';
+  onQuality();
+  assert.deepStrictEqual(shown(quality), ['720p', 'auto', 'Video resolution: Auto (720p)']);
+  player.preferred = 'hd2160';
+  panelObserver.callback();
+  assert.deepStrictEqual(shown(quality), ['720p', 'hd720', 'Video resolution: 720p'], 'a preference this video cannot play shows what plays');
+  // Docent's writes are page mutations too, so unchanged state must not write again.
+  let textWrites = 0;
+  for (const label of [speed.previousSibling, quality.previousSibling]) {
+    let text = label.textContent;
+    Object.defineProperty(label, 'textContent', { get: () => text, set: value => { text = value; textWrites++; } });
+  }
+  const optionsBefore = optionWrites;
+  panelObserver.callback();
+  panelObserver.callback();
+  assert.strictEqual(optionWrites + textWrites, optionsBefore, 'an unchanged player must not wake the observer again');
+  const pip = created.find(element => element.className === 'ytp-button docent-pip');
+  assert.strictEqual(pip.hidden, false);
+  assert.strictEqual(pip.ariaLabel, 'Picture-in-picture');
+  pip.onclick();
+  assert.strictEqual(player.pip, true, 'picture-in-picture goes through the player API');
+  player.preferred = 'auto';
+  player.playing = 'hd1080';
+  page.activeElement = trigger;
   notify(ads);
   assert.strictEqual(page.documentElement.dataset.docentPanel, 'none', 'passive ad panels must not open the column');
   theater = true;
@@ -366,30 +507,91 @@ async function checkSettings() {
   assert.strictEqual(scrolled, 210);
   notify(transcript, 'ENGAGEMENT_PANEL_VISIBILITY_HIDDEN');
 
-  let collapsed = true;
-  chat = { hasAttribute: () => collapsed, querySelector: () => ({ click: () => { collapsed = false; }, focus() {} }) };
+  chatInfo = {};
+  panelObserver.callback();
+  assert.strictEqual(chatButton.hidden, false, 'watch data exposes chat before its iframe exists');
+  assert.strictEqual(chatButton.ariaLabel, 'Live chat');
+  assert.strictEqual(cards[0].hasAttribute('data-docent-chat-entry'), true);
+  assert.strictEqual(cards[1].hasAttribute('data-docent-chat-entry'), false, 'other metadata entry points stay available');
+  assert.strictEqual(page.documentElement.dataset.docentPanel, 'none', 'availability cannot open a panel');
+  chatButton.onclick();
+  assert.strictEqual(page.documentElement.dataset.docentPanel, 'chat');
+  assert.strictEqual(chatRequests, 1, 'a lazy chat is opened through YouTube');
+  chat = { isConnected: true, hasAttribute: () => chatCollapsed };
+  notifyChat(true);
+  assert.strictEqual(page.documentElement.dataset.docentPanel, 'chat', 'initial lazy collapse cannot cancel the requested panel');
+  panelObserver.callback();
+  assert.strictEqual(chatCollapsed, false, 'a late chat iframe completes the pending open');
+  assert.strictEqual(chatButton.ariaPressed, 'true');
+  recommended.onclick();
+  assert.strictEqual(page.documentElement.dataset.docentPanel, 'related');
+  assert.strictEqual(chatButton.ariaPressed, 'false');
+  notifyChat(false);
+  panelObserver.callback();
+  assert.strictEqual(page.documentElement.dataset.docentPanel, 'related', 'background chat updates cannot replace recommendations');
+  recommended.onclick();
+  panelObserver.callback();
+  assert.strictEqual(page.documentElement.dataset.docentPanel, 'none', 'closing recommendations must not reopen chat');
+  assert.strictEqual(chatButton.ariaPressed, 'false');
+  chatButton.onclick();
+  assert.strictEqual(page.documentElement.dataset.docentPanel, 'chat');
+  chatButton.onclick();
+  panelObserver.callback();
+  assert.strictEqual(page.documentElement.dataset.docentPanel, 'none', 'chat glyph toggles closed without a fallback');
+  chatButton.onclick();
+  notify(comments);
+  assert.strictEqual(chatButton.ariaPressed, 'false', 'native panels replace chat');
+  notify(comments, 'ENGAGEMENT_PANEL_VISIBILITY_HIDDEN');
+  assert.strictEqual(page.documentElement.dataset.docentPanel, 'none', 'native close does not reopen chat');
+  chatButton.onclick();
+  notifyChat(true);
+  assert.strictEqual(page.documentElement.dataset.docentPanel, 'none', 'native chat close clears the selection');
+  assert.strictEqual(page.activeElement, chatButton, 'native chat close restores its glyph focus');
+
+  chatInfo = { isReplay: true };
+  panelObserver.callback();
+  assert.strictEqual(chatButton.ariaLabel, 'Live chat replay');
+  chatButton.onclick();
+  page.fullscreenElement = {};
+  notifyChat(true);
+  assert.strictEqual(page.documentElement.dataset.docentPanel, 'chat', 'fullscreen suspends chat');
+  page.fullscreenElement = null;
+  page.dispatchEvent(new Event('fullscreenchange'));
+  frames.shift()();
+  assert.strictEqual(chatCollapsed, false, 'fullscreen exit restores the selected chat through YouTube');
+  chatButton.onclick();
+  theater = true;
+  panelObserver.callback();
+  assert.strictEqual(theater, false, 'Docent normalizes native theater mode even with no panel selected');
+
   playlist = { querySelector: () => null };
   panelObserver.callback();
-  assert.strictEqual(page.documentElement.dataset.docentPanel, 'playlist', 'a collapsed chat must not hide an active playlist');
+  assert.strictEqual(page.documentElement.dataset.docentPanel, 'none', 'late playlists cannot choose a panel');
   openMenu();
-  items.querySelector('#docent-open-chat').onclick();
-  assert.strictEqual(collapsed, false);
-  assert.strictEqual(page.documentElement.dataset.docentPanel, 'chat');
-  notify(comments);
-  notify(comments, 'ENGAGEMENT_PANEL_VISIBILITY_HIDDEN');
-  assert.strictEqual(page.documentElement.dataset.docentPanel, 'chat', 'closing returns to intentional live context');
+  openMenu();
+  assert.strictEqual(items.children.filter(item => item.id === 'docent-open-playlist').length, 1);
+  assert.strictEqual(items.children.some(item => item.id === 'docent-open-chat'), false, 'chat has no duplicate menu entry');
   items.querySelector('#docent-open-playlist').onclick();
-  panelObserver.callback();
-  assert.strictEqual(page.documentElement.dataset.docentPanel, 'playlist', 'chat updates must not override an explicit playlist choice');
-  notify(comments);
-  notify(comments, 'ENGAGEMENT_PANEL_VISIBILITY_HIDDEN');
-  assert.strictEqual(page.documentElement.dataset.docentPanel, 'playlist', 'closing preserves the chosen queue context');
-  chat = undefined;
+  assert.strictEqual(page.documentElement.dataset.docentPanel, 'playlist');
+  chatButton.onclick();
+  assert.strictEqual(page.documentElement.dataset.docentPanel, 'chat');
+  items.querySelector('#docent-open-playlist').onclick();
   panelObserver.callback();
   assert.strictEqual(page.documentElement.dataset.docentPanel, 'playlist');
   playlist = undefined;
   panelObserver.callback();
   assert.strictEqual(page.documentElement.dataset.docentPanel, 'none');
+  chatButton.onclick();
+  dataVideoId = 'old-video';
+  panelObserver.callback();
+  assert.strictEqual(chatButton.hidden, true, 'stale video data cannot advertise chat');
+  assert.strictEqual(page.documentElement.dataset.docentPanel, 'none');
+  dataVideoId = undefined;
+  chatInfo = undefined;
+  panelObserver.callback();
+  assert.strictEqual(chatButton.hidden, true, 'a leftover iframe does not imply chat availability');
+  assert.strictEqual(cards[0].hasAttribute('data-docent-chat-entry'), false);
+  chat = undefined;
 
   notify(chapters);
   chapters.isConnected = false;
@@ -402,6 +604,7 @@ async function checkSettings() {
   page.dispatchEvent(new Event('yt-navigate-finish'));
   assert.strictEqual(panelObserver.connected, false);
   assert.strictEqual(page.documentElement.dataset.docentPanel, 'none');
+  assert.strictEqual(created.find(element => element.id === 'docent-chat').hidden, true, 'navigation clears the previous chat capability');
   assert.strictEqual(panels.querySelectorAll().length, 0);
   // yt-navigate-finish fires before the watch page shows the new video, so setup waits for it. Meanwhile
   // no panel is selected, and that state must have no column, or the column flashes open on every load.
@@ -418,12 +621,29 @@ async function checkSettings() {
   assert.strictEqual(page.documentElement.dataset.docentPanel, 'none');
   assert.strictEqual(timers.length, 0);
   notify(chapters);
+  chatInfo = {};
+  observers.at(-1).callback();
+  assert.strictEqual(cards[0].hasAttribute('data-docent-chat-entry'), true);
+  assert.deepStrictEqual(bar(), fullBar, 'setup reruns and navigation leave one of each player control');
+  assert.strictEqual(player.listeners.length, 1, 'and one quality listener on the player');
+  const replaced = player;
+  player = makePlayer();
+  observers.at(-1).callback();
+  assert.deepStrictEqual(bar(), fullBar, 'a rebuilt player gets the controls back');
+  assert.deepStrictEqual(replaced.controls.children.map(child => child.className), ['ytp-autonav-toggle', 'ytp-subtitles-button', 'ytp-settings-button']);
+  assert.strictEqual(player.listeners.length, 1);
+  assert.deepStrictEqual(shown(created.find(element => element.id === 'docent-quality')), ['1080p', 'auto', 'Video resolution: Auto (1080p)'], 'the new player\'s state, not the old one\'s');
   setPage(false);
   assert.strictEqual(chapters.getAttribute('visibility'), 'ENGAGEMENT_PANEL_VISIBILITY_EXPANDED', 'disabling must not rewrite native visibility');
   notify(other);
   assert.strictEqual(page.documentElement.dataset.docentPanel, undefined, 'disabled layout ignores native events');
   assert.strictEqual(panels.querySelectorAll().length, 0);
   assert.strictEqual(observers.at(-1).connected, false);
+  assert.strictEqual(cards.some(card => card.hasAttribute('data-docent-chat-entry')), false);
+  assert.deepStrictEqual(bar(), ['ytp-autonav-toggle', 'ytp-subtitles-button', 'ytp-settings-button'], 'disabling leaves YouTube\'s controls as they were');
+  setPage(true);
+  assert.deepStrictEqual(bar(), fullBar, 're-enabling adds each control once');
+  assert.strictEqual(player.listeners.length, 1);
 
   // The options page saves changes and follows a toggle made from another extension surface.
   const inputs = Object.fromEntries(Object.entries({ enabled: 'checkbox', autoScroll: 'checkbox', showDislike: 'checkbox' }).map(([id, type]) => [id, { id, type }]));
@@ -444,6 +664,6 @@ async function checkSettings() {
   await new Promise(resolve => setImmediate(resolve));
   assert.strictEqual(inputs.enabled.checked, false);
   assert.strictEqual(inputs.preferences.disabled, true);
-  console.log('ok: subscriptions, toolbar toggle, settings page and bridge, stale reads, validation, home lifecycle, native panels, navigation, disable cleanup');
+  console.log('ok: subscriptions, toolbar toggle, settings and bridge, native panels, live/replay chat, panel toggles, player bar, navigation, disable cleanup');
 }
 checkSettings().catch(error => { console.error(error); process.exitCode = 1; });
