@@ -314,14 +314,13 @@ async function check() {
   page.querySelector = selector => {
     if (selector === 'ytd-masthead') return {};
     if (selector === 'ytd-watch-flexy') return watch;
-    if (selector === 'ytd-watch-flexy[theater], ytd-watch-flexy[fullscreen]') return theater ? watch : null;
+    if (selector === '#panels > [data-docent-native]') return panels.querySelectorAll()[0] ?? null;
     if (selector === '.ytp-size-button') return { click: () => { theater = !theater; } };
     if (selector === '#movie_player') return player;
     if (selector.startsWith('#docent-')) return created.find(element => element.id === selector.slice(1)) ?? null;
     return null;
   };
-  page.querySelectorAll = selector => selector === '[data-docent-node]' ? created.filter(element => 'docentNode' in element.dataset)
-    : selector === '#panels ytd-engagement-panel-section-list-renderer[data-docent-native]' ? panels.querySelectorAll() : [];
+  page.querySelectorAll = selector => selector === '[data-docent-node]' ? created.filter(element => 'docentNode' in element.dataset) : [];
   main.URLSearchParams = URLSearchParams;
   main.location.pathname = '/watch';
   main.location.search = `?v=${videoId}`;

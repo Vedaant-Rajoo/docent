@@ -54,12 +54,6 @@ let restoreWatch = () => {};
 
 let guide;
 
-// YouTube serves two transcript layouts: transcript-segment-view-model rows and the older
-// ytd-transcript-segment-renderer rows. Find the open panel by its rows, because its
-// target-id is sometimes missing.
-const transcriptPanel = () => [...document.querySelectorAll('#panels ytd-engagement-panel-section-list-renderer[data-docent-native]')]
-  .find(panel => panel.querySelector('transcript-segment-view-model, ytd-transcript-segment-renderer'));
-
 // Links to the channels in the guide's subscriptions section, which YouTube orders by recent
 // activity. Channels with new videos get a dot. The section nests the channels past the first
 // few inside a "Show more" entry, so collect channel entries at any depth.
@@ -143,7 +137,7 @@ function setup(tries = 0) {
   // yt-navigate-finish fires before the watch page shows the new video. On first load the
   // description isn't rendered yet, and after in-app navigation the previous video's transcript
   // button is still there. ytd-watch-flexy's video-id switches once the new metadata is in.
-  if (tries < 100 && (!document.body || !$('ytd-masthead') || (onWatchPage && $('ytd-watch-flexy')?.getAttribute('video-id') !== new URLSearchParams(location.search).get('v')))) {
+  if (tries < 100 && (!$('ytd-masthead') || (onWatchPage && $('ytd-watch-flexy')?.getAttribute('video-id') !== new URLSearchParams(location.search).get('v')))) {
     setupTimer = setTimeout(setup, 50, tries + 1);
     return;
   }
@@ -165,7 +159,7 @@ function setup(tries = 0) {
     iconLink('history', 'History', '/feed/history'),
     iconLink('liked', 'Liked videos', '/playlist?list=LL'),
     channels,
-    Object.assign(iconButton('settings', 'Docent settings', () => document.dispatchEvent(new Event('docent-open-settings'))), { id: 'docent-settings' }),
+    iconButton('settings', 'Docent settings', () => document.dispatchEvent(new Event('docent-open-settings'))),
   );
   document.body.append(el('a', { id: 'docent-logo', title: 'YouTube', ariaLabel: 'YouTube', href: '/' }, logo()), rail);
   // ponytail: one fetch per page load, so channels subscribed to since then show after a reload.
@@ -173,13 +167,11 @@ function setup(tries = 0) {
   guide?.then(data => {
     if (rail.isConnected) channels.replaceChildren(...subscriptions(data));
   }, () => { guide = undefined; });
-  if (!onWatchPage) {
+  const watch = onWatchPage && $('ytd-watch-flexy');
+  if (!watch) {
     dispatchEvent(new Event('resize'));
     return;
   }
-
-  const watch = $('ytd-watch-flexy');
-  if (!watch) return;
   const player = $('#movie_player');
   const panels = $('#panels', watch);
   let activePanel, activeChat, opener, lastTrigger, fullscreenPanel, menuRequested = false;
@@ -213,7 +205,7 @@ function setup(tries = 0) {
     fullscreenPanel = undefined;
     const focused = surface(root.dataset.docentPanel)?.contains(document.activeElement);
     show('none');
-    const target = opener?.isConnected && opener.checkVisibility() ? opener : player;
+    const target = opener?.checkVisibility() ? opener : player;
     if (focused || document.activeElement === document.body) target?.focus({ preventScroll: true });
   };
   const reveal = () => {
@@ -358,7 +350,7 @@ function setup(tries = 0) {
 }
 
 document.addEventListener('yt-navigate-finish', () => setup());
-document.addEventListener('DOMContentLoaded', () => setup(), { once: true });
+document.addEventListener('DOMContentLoaded', () => setup());
 new MutationObserver(() => setup()).observe(document.documentElement, { attributeFilter: ['dark'] });
 
 document.addEventListener('docent-settings', event => {
@@ -380,8 +372,10 @@ document.addEventListener('ratechange', syncPlayer, true);
 // scrolls the active row back into view whenever the pointer is off the transcript. The rows sit
 // in nested overflow boxes, so scroll the nearest one that actually scrolls.
 document.addEventListener('timeupdate', () => {
-  if (!settings?.autoScroll || !document.documentElement.hasAttribute('data-docent') || document.documentElement.dataset.docentPanel !== 'native' || $('ytd-watch-flexy[theater], ytd-watch-flexy[fullscreen]') || document.fullscreenElement) return;
-  const panel = transcriptPanel();
+  // Fullscreen hides #panels (docent.css), so the visibility check below covers it.
+  if (!settings?.autoScroll || document.documentElement.dataset.docentPanel !== 'native') return;
+  // The active row in either transcript layout: transcript-segment-view-model or the older ytd-transcript-segment-renderer.
+  const panel = $('#panels > [data-docent-native]');
   const row = panel?.querySelector('.ytwTranscriptSegmentViewModelHostActive, ytd-transcript-segment-renderer.active');
   if (!row?.checkVisibility() || panel.matches(':hover')) return;
   let list = row.parentElement;
