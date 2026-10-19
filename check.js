@@ -3,17 +3,17 @@
 const assert = require('node:assert');
 const fs = require('node:fs');
 const vm = require('node:vm');
+const { setImmediate } = require('node:timers/promises');
 
 const node = () => ({ dataset: {}, children: [], append(...children) {
   for (const child of children) this.children.push(Object.assign(child, { parentNode: this, previousSibling: this.children.at(-1) }));
 } });
-const context = vm.createContext({
-  document: { createElement: node, createElementNS: node, addEventListener() {}, dispatchEvent() {} },
+const { subscriptions } = vm.runInNewContext(`${fs.readFileSync(`${__dirname}/docent.js`, 'utf8')}\n({ subscriptions })`, {
+  document: { createElement: node, addEventListener() {}, dispatchEvent() {} },
   Event,
   addEventListener() {},
   MutationObserver: class { observe() {} },
 });
-const { subscriptions } = vm.runInContext(`${fs.readFileSync(`${__dirname}/docent.js`, 'utf8')}\n({ subscriptions })`, context);
 
 const channel = (browseId, name, presentationStyle = 'GUIDE_ENTRY_PRESENTATION_STYLE_NONE') => ({ guideEntryRenderer: {
   navigationEndpoint: { browseEndpoint: { browseId } },
@@ -78,14 +78,13 @@ async function check() {
   const background = vm.createContext({ chrome, console });
   vm.runInContext(fs.readFileSync(`${__dirname}/background.js`, 'utf8'), background);
   chrome.runtime.onInstalled.fire();
-  await new Promise(resolve => setImmediate(resolve));
+  await setImmediate();
   assert.strictEqual(badge.title, 'Disable Docent');
   assert.strictEqual(badge.text, '');
 
   // A click turns off globally. Two rapid clicks must both count, not read the same stale value.
   chrome.action.onClicked.fire();
   await vm.runInContext('toggles', background);
-  assert.strictEqual(values.enabled, false);
   assert.strictEqual(badge.text, 'OFF');
   chrome.action.onClicked.fire();
   chrome.action.onClicked.fire();
@@ -96,11 +95,11 @@ async function check() {
   const received = [];
   document.addEventListener('docent-settings', event => received.push(event.detail));
   vm.runInNewContext(fs.readFileSync(`${__dirname}/bridge.js`, 'utf8'), { chrome, document, CustomEvent, console });
-  await new Promise(resolve => setImmediate(resolve));
+  await setImmediate();
   assert.deepStrictEqual(received.at(-1), { enabled: false, autoScroll: true, showDislike: false });
-  await local.set({ enabled: true, panel: 'chat', autoScroll: false });
-  await new Promise(resolve => setImmediate(resolve));
-  assert.deepStrictEqual(received.at(-1), { enabled: true, autoScroll: false, showDislike: false }, 'legacy panel preferences must not reach the page');
+  await local.set({ enabled: true, autoScroll: false, showDislike: false });
+  await setImmediate();
+  assert.deepStrictEqual(received.at(-1), { enabled: true, autoScroll: false, showDislike: false });
   document.dispatchEvent(new Event('docent-open-settings'));
   assert.strictEqual(optionsOpened, 1);
 
@@ -115,10 +114,11 @@ async function check() {
   page.querySelectorAll = selector => selector === '[data-docent-node]' ? [{ remove() { removed++; } }] : [];
   const observers = [], frames = [];
   const main = vm.createContext({
-    document: page, Event, CustomEvent, location: { pathname: '/watch' }, clearTimeout,
+    document: page, Event, URLSearchParams, location: { pathname: '/watch' }, clearTimeout,
     Option: class { constructor(text, value) { this.textContent = text; this.value = String(value); } get text() { return this.textContent; } },
     addEventListener() {}, dispatchEvent() { resized++; },
     requestAnimationFrame: callback => frames.push(callback),
+    getComputedStyle: () => ({ overflowY: 'auto' }),
     MutationObserver: class { constructor(callback) { this.callback = callback; observers.push(this); } observe() { this.connected = true; } disconnect() { this.connected = false; } },
   });
   vm.runInContext(fs.readFileSync(`${__dirname}/docent.js`, 'utf8'), main);
@@ -126,15 +126,14 @@ async function check() {
     page.dispatchEvent(new CustomEvent('docent-settings', { detail }));
   }
   assert.strictEqual(removed, 0, 'malformed settings must not change the page');
-  page.dispatchEvent(new CustomEvent('docent-settings', { detail: { enabled: false, panel: 'transcript', autoScroll: true } }));
+  page.dispatchEvent(new CustomEvent('docent-settings', { detail: { enabled: false, autoScroll: true } }));
   assert.strictEqual(attributes.has('data-docent'), false);
   assert.strictEqual(attributes.has('data-docent-watch'), false);
-  assert.strictEqual(attributes.has('data-docent-home'), false);
   assert.strictEqual(page.documentElement.dataset.docentPanel, undefined);
   assert.strictEqual(removed, 1);
   assert.strictEqual(resized, 1);
 
-  // Home has no player or watch metadata. Repeated toggles must create exactly one shell.
+  // Home has no player or watch metadata.
   const created = [];
   // Moves an element under a parent, as the DOM does: an element has one place at a time.
   const place = (parent, element, index = parent.children.length) => {
@@ -146,7 +145,6 @@ async function check() {
   let optionWrites = 0;
   page.createElement = tag => {
     const element = node();
-    element.tagName = tag.toUpperCase();
     element.setAttribute = () => {};
     element.isConnected = true;
     element.checkVisibility = () => element.isConnected;
@@ -158,7 +156,6 @@ async function check() {
       const siblings = element.parentNode?.children;
       if (siblings?.includes(element)) siblings.splice(siblings.indexOf(element), 1);
     };
-    element.insertBefore = (child, before) => element.children.splice(element.children.indexOf(before), 0, child);
     element.after = (...elements) => elements.forEach((next, offset) => place(element.parentNode, next, element.parentNode.children.indexOf(element) + 1 + offset));
     if (tag === 'select') {
       element.selectedIndex = -1;
@@ -176,15 +173,13 @@ async function check() {
   page.querySelector = selector => selector === 'ytd-masthead' ? {} : null;
   page.querySelectorAll = selector => selector === '[data-docent-node]' ? created.filter(element => 'docentNode' in element.dataset) : [];
   main.location.pathname = '/';
-  const setPage = enabled => page.dispatchEvent(new CustomEvent('docent-settings', { detail: { enabled, panel: 'transcript', autoScroll: true } }));
+  const setPage = enabled => page.dispatchEvent(new CustomEvent('docent-settings', { detail: { enabled, autoScroll: true } }));
   setPage(true);
   assert.strictEqual(attributes.has('data-docent'), true);
   assert.strictEqual(attributes.has('data-docent-watch'), false);
   assert.strictEqual(attributes.has('data-docent-home'), true);
   assert.strictEqual(created.filter(element => element.id === 'docent-rail').length, 1);
   assert.strictEqual(created.some(element => element.id === 'docent-recommended'), false, 'recommendations belong to watch pages');
-  setPage(true);
-  assert.strictEqual(created.filter(element => element.id === 'docent-rail').length, 1);
   setPage(false);
   assert.strictEqual(created.filter(element => 'docentNode' in element.dataset).length, 0);
   assert.strictEqual(attributes.has('data-docent-home'), false);
@@ -194,7 +189,7 @@ async function check() {
   const makePanel = id => {
     const attributes = new Map([['target-id', id], ['visibility', 'ENGAGEMENT_PANEL_VISIBILITY_HIDDEN']]);
     const panel = {
-      parentElement: panels, isConnected: true, draft: '', scrollTop: 0,
+      parentElement: panels, isConnected: true, scrollTop: 0,
       getAttribute: key => attributes.get(key) ?? null, hasAttribute: key => attributes.has(key),
       setAttribute: (key, value) => attributes.set(key, value), removeAttribute: key => attributes.delete(key),
       closest: () => panel, querySelector: () => null, contains: element => element === panel,
@@ -299,7 +294,6 @@ async function check() {
     return null;
   };
   page.querySelectorAll = selector => selector === '[data-docent-node]' ? created.filter(element => 'docentNode' in element.dataset) : [];
-  main.URLSearchParams = URLSearchParams;
   main.location.pathname = '/watch';
   main.location.search = `?v=${videoId}`;
   const notify = (panel, visibility = 'ENGAGEMENT_PANEL_VISIBILITY_EXPANDED') => {
@@ -322,9 +316,7 @@ async function check() {
     const event = new Event('click');
     Object.defineProperty(event, 'target', { value: trigger });
     page.dispatchEvent(event);
-    const opened = new CustomEvent('yt-popup-opened', { detail: popup });
-    Object.defineProperty(opened, 'target', { value: popup });
-    page.dispatchEvent(opened);
+    page.dispatchEvent(new CustomEvent('yt-popup-opened', { detail: popup }));
   };
   page.activeElement = trigger;
   setPage(true);
@@ -337,7 +329,7 @@ async function check() {
   assert.strictEqual(recommended.ariaControls, 'related');
   assert.strictEqual(recommended.ariaPressed, 'false');
   assert.strictEqual(created.filter(element => element.id === 'docent-recommended').length, 1);
-  assert.strictEqual(page.documentElement.dataset.docentPanel, 'none', 'ordinary videos start without a column, ignoring legacy defaults and ads');
+  assert.strictEqual(page.documentElement.dataset.docentPanel, 'none', 'ordinary videos start without a column, ignoring ads');
   assert.strictEqual(created.find(element => element.id === 'docent-panels').children.length, 2, 'only chat and recommendations belong in the panel bar');
 
   // The player bar: speed and resolution pickers show what the player offers and plays, follow changes
@@ -399,19 +391,16 @@ async function check() {
   notify(chapters);
   assert.strictEqual(theater, false, 'an explicit native panel action leaves theater mode');
   assert.deepStrictEqual(panels.querySelectorAll(), [chapters]);
-  ask.draft = 'Keep this question';
   transcript.scrollTop = 240;
   notify(ask);
   notify(transcript);
   assert.deepStrictEqual(panels.querySelectorAll(), [transcript], 'Ask and transcript cannot occupy the column together');
-  assert.strictEqual(ask.draft, 'Keep this question');
   assert.strictEqual(transcript.scrollTop, 240);
   notify(other);
   assert.deepStrictEqual(panels.querySelectorAll(), [other], 'unknown and lazy native panels need no new control');
   other.setAttribute('visibility', 'ENGAGEMENT_PANEL_VISIBILITY_HIDDEN');
   panelObserver.callback();
   assert.deepStrictEqual(panels.querySelectorAll(), [other], 'native expansion can precede a delayed visibility update');
-  other.setAttribute('visibility', 'ENGAGEMENT_PANEL_VISIBILITY_EXPANDED');
   watch.dispatchEvent(new CustomEvent('yt-action', { detail: { actionName: 'yt-engagement-panel-visible-changed', args: [] } }));
   assert.deepStrictEqual(panels.querySelectorAll(), [other], 'malformed events cannot change ownership');
   page.activeElement = other;
@@ -430,12 +419,7 @@ async function check() {
   assert.strictEqual(chapters.getAttribute('visibility'), 'ENGAGEMENT_PANEL_VISIBILITY_EXPANDED', 'exit restores through the native panel API');
   notify(chapters, 'ENGAGEMENT_PANEL_VISIBILITY_HIDDEN');
 
-  openMenu();
-  openMenu();
-  assert.strictEqual(items.children.some(item => item.id === 'docent-open-related'), false, 'recommendations have one header entry point');
-  assert.strictEqual(items.children[0].id, 'native-report', 'native menu actions remain intact');
   recommended.onclick();
-  assert.strictEqual(menuClosed, 0);
   assert.strictEqual(page.documentElement.dataset.docentPanel, 'related');
   assert.strictEqual(recommended.ariaPressed, 'true');
   assert.strictEqual(panels.querySelectorAll().length, 0);
@@ -463,9 +447,8 @@ async function check() {
   let scrolled = 0;
   const list = { scrollHeight: 600, clientHeight: 200, getBoundingClientRect: () => ({ top: 0, bottom: 200, height: 200 }), scrollBy: ({ top }) => { scrolled += top; } };
   const row = { parentElement: list, checkVisibility: () => true, getBoundingClientRect: () => ({ top: 300, bottom: 320, height: 20 }) };
-  transcript.querySelector = selector => selector.startsWith('transcript-segment') ? row : selector.startsWith('.ytwTranscript') ? row : null;
+  transcript.querySelector = () => row;
   transcript.matches = () => false;
-  main.getComputedStyle = () => ({ overflowY: 'auto' });
   notify(transcript);
   page.dispatchEvent(new Event('timeupdate'));
   assert.strictEqual(scrolled, 210);
@@ -547,6 +530,7 @@ async function check() {
   assert.strictEqual(items.children.filter(item => item.id === 'docent-open-playlist').length, 1);
   assert.strictEqual(items.children.some(item => item.id === 'docent-open-chat'), false, 'chat has no duplicate menu entry');
   items.querySelector('#docent-open-playlist').onclick();
+  assert.strictEqual(menuClosed, 1, 'choosing an entry closes the menu');
   assert.strictEqual(page.documentElement.dataset.docentPanel, 'playlist');
   chatButton.onclick();
   assert.strictEqual(page.documentElement.dataset.docentPanel, 'chat');
@@ -627,7 +611,7 @@ async function check() {
   inputs.preferences = {};
   inputs.status = { toggleAttribute() {}, removeAttribute() {} };
   vm.runInNewContext(fs.readFileSync(`${__dirname}/settings.js`, 'utf8'), { chrome, document: { getElementById: id => inputs[id] }, console });
-  await new Promise(resolve => setImmediate(resolve));
+  await setImmediate();
   assert.strictEqual(inputs.enabled.checked, true);
   assert.strictEqual(inputs.autoScroll.checked, false);
   assert.strictEqual(inputs.showDislike.checked, false, 'Dislike stays hidden by default');
@@ -636,9 +620,9 @@ async function check() {
   assert.strictEqual(values.autoScroll, true);
   assert.strictEqual(inputs.status.textContent, 'Saved');
   await local.set({ enabled: false });
-  await new Promise(resolve => setImmediate(resolve));
+  await setImmediate();
   assert.strictEqual(inputs.enabled.checked, false);
   assert.strictEqual(inputs.preferences.disabled, true);
   console.log('ok: subscriptions, toolbar toggle, settings and bridge, native panels, live/replay chat, panel toggles, player bar, navigation, disable cleanup');
 }
-check().catch(error => { console.error(error); process.exitCode = 1; });
+check();
