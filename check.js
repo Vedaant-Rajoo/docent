@@ -412,7 +412,7 @@ async function check() {
   notify(chapters, 'ENGAGEMENT_PANEL_VISIBILITY_HIDDEN');
   assert.deepStrictEqual(panels.querySelectorAll(), [chapters], 'fullscreen suspends the current component');
   page.fullscreenElement = null;
-  page.dispatchEvent(new Event('fullscreenchange'));
+  panelObserver.callback();
   frames.shift()();
   assert.strictEqual(chapters.getAttribute('visibility'), 'ENGAGEMENT_PANEL_VISIBILITY_EXPANDED', 'exit restores through the native panel API');
   notify(chapters, 'ENGAGEMENT_PANEL_VISIBILITY_HIDDEN');
@@ -510,7 +510,7 @@ async function check() {
   notifyChat(true);
   assert.strictEqual(page.documentElement.dataset.docentPanel, 'chat', 'fullscreen suspends chat');
   page.fullscreenElement = null;
-  page.dispatchEvent(new Event('fullscreenchange'));
+  panelObserver.callback();
   frames.shift()();
   assert.strictEqual(chatCollapsed, false, 'fullscreen exit restores the selected chat through YouTube');
   chatButton.onclick();

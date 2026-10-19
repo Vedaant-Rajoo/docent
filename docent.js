@@ -191,7 +191,6 @@ function setup(tries = 0) {
   // positions belong to YouTube. Ordinary videos have no column until an action opens it.
   const show = (name, panel) => {
     fullscreenPanel = undefined;
-    if (name !== 'chat') activeChat = undefined;
     activePanel?.removeAttribute('data-docent-native');
     activePanel = panel;
     panel?.setAttribute('data-docent-native', '');
@@ -202,7 +201,6 @@ function setup(tries = 0) {
     dispatchEvent(new Event('resize'));
   };
   const close = () => {
-    fullscreenPanel = undefined;
     const focused = surface(root.dataset.docentPanel)?.contains(document.activeElement);
     show('none');
     const target = opener?.checkVisibility() ? opener : $('#movie_player');
@@ -229,7 +227,7 @@ function setup(tries = 0) {
     if (content) $('h2, button, iframe', content)?.focus();
   };
   const recommended = Object.assign(iconButton('related', 'Recommended videos', () => toggle('related', recommended)), { id: 'docent-recommended', type: 'button', ariaControls: 'related' });
-  const chat = Object.assign(iconButton('chat', 'Live chat', () => toggle('chat', chat)), { id: 'docent-chat', type: 'button', ariaControls: 'chat', hidden: true });
+  const chat = Object.assign(iconButton('chat', 'Live chat', () => toggle('chat', chat)), { id: 'docent-chat', type: 'button', ariaControls: 'chat' });
   document.body.append(el('div', { id: 'docent-panels', role: 'group', ariaLabel: 'Video panels' }, chat, recommended));
   const syncChat = () => {
     const data = chatData();
@@ -249,20 +247,20 @@ function setup(tries = 0) {
       if (panel !== activePanel) opener = focused && watch.contains(focused) && !focused.closest('#secondary') ? focused : lastTrigger;
       show('native', panel);
     } else if (['ENGAGEMENT_PANEL_VISIBILITY_HIDDEN', 'ENGAGEMENT_PANEL_VISIBILITY_COLLAPSED'].includes(visibility) && panel === activePanel) {
-      if (document.fullscreenElement || watch.hasAttribute('fullscreen')) fullscreenPanel = panel;
+      if (inFullscreen()) fullscreenPanel = panel;
       else if (fullscreenPanel !== panel) close();
     }
   };
   const onChatChange = event => {
     if (event.target !== activeChat || event.detail !== true || root.dataset.docentPanel !== 'chat') return;
-    if (document.fullscreenElement || watch.hasAttribute('fullscreen')) fullscreenPanel = event.target;
+    if (inFullscreen()) fullscreenPanel = event.target;
     else if (fullscreenPanel !== event.target) close();
   };
   const resumePanel = () => {
-    if (document.fullscreenElement || watch.hasAttribute('fullscreen') || !fullscreenPanel) return;
+    if (inFullscreen() || !fullscreenPanel) return;
     const panel = fullscreenPanel;
     requestAnimationFrame(() => {
-      if (fullscreenPanel !== panel || !panel.isConnected || document.fullscreenElement || watch.hasAttribute('fullscreen')) return;
+      if (fullscreenPanel !== panel || !panel.isConnected || inFullscreen()) return;
       fullscreenPanel = undefined;
       if (panel === activePanel) panel.showPanel?.();
       else if (root.dataset.docentPanel === 'chat' && panel === chatFrame()) expandChat();
@@ -327,15 +325,13 @@ function setup(tries = 0) {
   watch.addEventListener('yt-chat-collapsed-changed', onChatChange, true);
   document.addEventListener('click', remember, true);
   document.addEventListener('yt-popup-opened', onPopup, true);
-  document.addEventListener('fullscreenchange', resumePanel);
-  observer.observe(watch, { childList: true, subtree: true, attributes: true, attributeFilter: ['collapsed', 'hidden', 'theater', 'fullscreen'] });
+  observer.observe(watch, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'theater', 'fullscreen'] });
   restoreWatch = () => {
     observer.disconnect();
     watch.removeEventListener('yt-action', onPanelChange, true);
     watch.removeEventListener('yt-chat-collapsed-changed', onChatChange, true);
     document.removeEventListener('click', remember, true);
     document.removeEventListener('yt-popup-opened', onPopup, true);
-    document.removeEventListener('fullscreenchange', resumePanel);
     fullscreenPanel = undefined;
     activePanel?.removeAttribute('data-docent-native');
     watch.querySelectorAll('[data-docent-chat-entry]').forEach(card => card.removeAttribute('data-docent-chat-entry'));
