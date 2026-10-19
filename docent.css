@@ -6,6 +6,7 @@ html[data-docent] {
   --docent-line: rgba(255, 255, 255, .08);
   --docent-muted: #9a9aa1;
   --docent-fill: rgba(255, 255, 255, .08);
+  --docent-text: #d6d6da;
 
   &, & body, & ytd-app, & ytd-masthead { background: var(--docent-bg) !important; }
   /* YouTube frosts its header on some pages, home and search among them, and marks them with frosted-glass-mode.
@@ -14,8 +15,7 @@ html[data-docent] {
      covers #background. */
   & ytd-masthead[frosted-glass-mode]:not([frosted-glass-mode=none]) { background: transparent !important; }
   & :is(ytd-masthead #background, #frosted-glass) { left: 64px !important; right: 0 !important; width: auto !important; background: rgba(12, 12, 14, .8) !important; backdrop-filter: blur(48px) !important; }
-  & #cinematics, & #cinematics-container { display: none !important; }
-  & :is(ytd-guide, ytd-mini-guide) { display: none !important; }
+  & :is(#cinematics, #cinematics-container, ytd-guide, ytd-mini-guide) { display: none !important; }
   & ytd-app { --app-drawer-width: 64px; --ytd-mini-guide-width: 64px; --ytd-persistent-guide-width: 64px; }
 
   /* Header: the search box alone in the middle, plus Docent's buttons */
@@ -27,11 +27,12 @@ html[data-docent] {
   & ytd-masthead #center { flex: 0 1 520px !important; max-width: calc(100vw - 320px) !important; margin: 0 !important; }
   & ytd-masthead .ytSearchboxComponentInputBox { border-radius: 10px !important; background: #18181b !important; border-color: var(--docent-line) !important; }
   & yt-searchbox { position: relative; }
-  & #docent-kbd { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font: 500 11px/1 Roboto, Arial; color: var(--docent-muted); border: 1px solid var(--docent-line); border-radius: 6px; padding: 4px 6px; pointer-events: none; }
-  & #docent-nav, & #docent-reload { position: fixed; top: 10px; z-index: 2100; display: flex; gap: 4px; }
+  & #docent-kbd { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font: 500 11px/1 Roboto, Arial, sans-serif; color: var(--docent-muted); border: 1px solid var(--docent-line); border-radius: 6px; padding: 4px 6px; pointer-events: none; }
+  & :is(#docent-logo, #docent-nav, #docent-reload, #docent-panels) { position: fixed; top: 10px; z-index: 2100; }
+  & :is(#docent-nav, #docent-reload, #docent-panels) { display: flex; gap: 4px; }
   & #docent-nav { left: 80px; }
   & #docent-reload { right: 16px; }
-  & #docent-panels { position: fixed; top: 10px; right: 64px; z-index: 2100; display: flex; gap: 4px; }
+  & #docent-panels { right: 64px; }
   & #docent-panels [hidden] { display: none; }
   /* Keep YouTube's menu handlers, notification count and account eligibility. */
   &[data-docent-home] ytd-masthead {
@@ -42,20 +43,19 @@ html[data-docent] {
     & #buttons { display: flex; gap: 4px; margin: 0 !important; }
     & #buttons > :is(ytd-notification-topbar-button-renderer, :has([aria-label=Create])) { width: 36px !important; height: 36px !important; margin: 0 !important; padding: 0 !important; }
     & #end :is(yt-icon-button, button) { width: 36px !important; height: 36px !important; }
-    & #end button { box-sizing: border-box; display: grid !important; place-items: center; border: 0 !important; border-radius: 10px !important; padding: 8px !important; background: transparent !important; color: #d6d6da !important; cursor: pointer; }
+    & #end button { box-sizing: border-box; display: grid !important; place-items: center; border: 0 !important; border-radius: 10px !important; padding: 8px !important; background: transparent !important; color: var(--docent-text) !important; cursor: pointer; }
     & #end button:hover { background: var(--docent-fill) !important; }
-    & #end button:focus-visible { outline: 2px solid #a9b8e8; outline-offset: 2px; }
     & #end yt-icon { width: 20px !important; height: 20px !important; }
     & button[aria-label=Create] > :not(yt-touch-feedback-shape, yt-interaction) { display: none !important; }
     & button[aria-label=Create]::before { content: '+'; font: 300 26px/20px Arial, sans-serif; }
   }
-  & .docent-icon { all: unset; flex: none; cursor: pointer; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 10px; color: #d6d6da; }
+  & .docent-icon { all: unset; flex: none; cursor: pointer; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 10px; color: var(--docent-text); }
   & .docent-icon:hover { background: var(--docent-fill); }
   & #docent-panels [aria-pressed=true] { background: #ededee; color: #141416; }
-  & .docent-icon:focus-visible { outline: 2px solid #a9b8e8; outline-offset: 2px; }
+  & :is(.docent-icon, ytd-masthead #end button):focus-visible { outline: 2px solid #a9b8e8; outline-offset: 2px; }
 
   /* Icon rail */
-  & #docent-logo { position: fixed; top: 10px; left: 14px; z-index: 2100; width: 36px; height: 36px; display: grid; place-items: center; }
+  & #docent-logo { left: 14px; width: 36px; height: 36px; display: grid; place-items: center; }
   & #docent-rail { position: fixed; top: 56px; left: 0; bottom: 0; width: 64px; z-index: 2050; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 0; background: var(--docent-bg); box-sizing: border-box; }
   & #docent-subscriptions { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; display: flex; flex-direction: column; gap: 6px; padding-top: 6px; border-top: 1px solid var(--docent-line); }
   & #docent-subscriptions:empty { border-top: 0; }
@@ -68,11 +68,11 @@ html[data-docent] {
   & ytd-browse[page-subtype=home] ytd-feed-filter-chip-bar-renderer {
     & yt-chip-cloud-chip-renderer { margin-right: 8px !important; }
     & :is(yt-chip-cloud-chip-renderer:not(:has(chip-shape)), .ytChipShapeInactive, .ytChipShapeInactiveRedesign, .ytChipShapeActive, .ytChipShapeActiveRedesign) {
-      box-sizing: border-box; height: 32px !important; padding: 0 14px !important; border: 1px solid rgba(255, 255, 255, .1) !important;
+      box-sizing: border-box; height: 32px !important; padding: 0 14px !important; border: 1px solid var(--docent-line) !important;
       border-radius: 999px !important; background: transparent !important; color: #b3b3ba !important; font: 500 13px/30px Roboto, Arial, sans-serif !important;
     }
     & .ytChipShapeText { font: inherit !important; }
-    & :is(yt-chip-cloud-chip-renderer:not([selected]):not(:has(chip-shape)), .ytChipShapeInactive, .ytChipShapeInactiveRedesign):hover { background: var(--docent-fill) !important; color: #f1f1f1 !important; }
+    & :is(yt-chip-cloud-chip-renderer:not([selected], :has(chip-shape)), .ytChipShapeInactive, .ytChipShapeInactiveRedesign):hover { background: var(--docent-fill) !important; color: #f1f1f1 !important; }
     & :is(yt-chip-cloud-chip-renderer[selected]:not(:has(chip-shape)), .ytChipShapeActive, .ytChipShapeActiveRedesign) { background: #ededee !important; border-color: #ededee !important; color: #141416 !important; }
     & yt-chip-cloud-chip-renderer:is(:focus-visible, :has(:focus-visible)) { outline: 2px solid #ededee; outline-offset: 3px; border-radius: 999px; }
     /* Solid behind the categories, unless YouTube pins them on its frosted header. There it leaves them
@@ -102,9 +102,9 @@ html[data-docent] {
     & #player.skeleton.flexy #player-wrap { width: auto !important; }
     & #player.skeleton.flexy :is(#player-api, #player-placeholder) { width: min(100%, (100vh - 116px) * 16 / 9) !important; height: auto !important; aspect-ratio: 16 / 9; border-radius: 16px; }
   }
-  & ytd-watch-flexy #secondary-inner { box-sizing: border-box; display: flex; flex-direction: column; background: var(--docent-card); border: 1px solid var(--docent-line); border-radius: 16px; overflow: hidden; }
+  & ytd-watch-flexy :is(#secondary-inner, #primary :is(#panels, #chat-container)) { box-sizing: border-box; display: flex; flex-direction: column; background: var(--docent-card); border: 1px solid var(--docent-line); border-radius: 16px; overflow: hidden; }
   /* At narrow widths YouTube moves panels and chat below the player. Bound those too. */
-  & ytd-watch-flexy #primary :is(#panels, #chat-container) { box-sizing: border-box; display: flex; flex-direction: column; min-height: 0; height: calc(100vh - 84px); max-height: calc(100vh - 84px); background: var(--docent-card); border: 1px solid var(--docent-line); border-radius: 16px; overflow: hidden; }
+  & ytd-watch-flexy #primary :is(#panels, #chat-container) { min-height: 0; height: calc(100vh - 84px); max-height: calc(100vh - 84px); }
   & ytd-watch-flexy #primary #chat-container:has(ytd-live-chat-frame[collapsed]) { height: auto; }
   /* YouTube is testing a layout (ytd-watch-flexy[using-fixed-panel]) that already pins the panels
      to the right edge. Only the older layout needs Docent to make the column sticky. */
@@ -120,9 +120,9 @@ html[data-docent] {
   &[data-docent-panel=playlist] #secondary:has(#playlist[collapsed]) { height: auto !important; }
   /* YouTube is testing a chip redesign (outlined chips, a faint fill on the selected one) that barely
      marks the selection on the card, so chips in the column get one look whichever design is served. */
-  & #secondary :is(.ytChipShapeInactive, .ytChipShapeInactiveRedesign) { border: 0 !important; background: var(--docent-fill) !important; color: #d6d6da !important; }
+  & #secondary :is(.ytChipShapeInactive, .ytChipShapeInactiveRedesign) { border: 0 !important; background: var(--docent-fill) !important; color: var(--docent-text) !important; }
   & #secondary :is(.ytChipShapeInactive, .ytChipShapeInactiveRedesign):hover { background: rgba(255, 255, 255, .14) !important; }
-  & #secondary :is(.ytChipShapeActive, .ytChipShapeActiveRedesign) { border: 0 !important; background: #f1f1f1 !important; color: #0c0c0e !important; }
+  & #secondary :is(.ytChipShapeActive, .ytChipShapeActiveRedesign) { border: 0 !important; background: #ededee !important; color: #141416 !important; }
   & #secondary-inner > :not(#panels, #chat-container, #playlist, #related),
   &:not([data-docent-panel=native]) ytd-watch-flexy #panels,
   &:not([data-docent-panel=chat]) ytd-watch-flexy #chat-container,
@@ -130,14 +130,14 @@ html[data-docent] {
   &:not([data-docent-panel=related]) ytd-watch-flexy #related,
   & #panels > :not([data-docent-native]),
   &:has(#panels > [data-docent-native][target-id=engagement-panel-comments-section]) #primary ytd-comments#comments { display: none !important; }
-  & ytd-live-chat-frame#chat { flex: 1; height: auto !important; min-height: 0 !important; margin: 0 !important; border: 0 !important; border-radius: 0 !important; }
-  & #panels ytd-engagement-panel-section-list-renderer[visibility=ENGAGEMENT_PANEL_VISIBILITY_EXPANDED] { flex: 1; min-height: 0; height: auto !important; max-height: none !important; margin: 0 !important; border: 0 !important; border-radius: 0 !important; background: transparent !important; }
+  & :is(ytd-live-chat-frame#chat, #panels ytd-engagement-panel-section-list-renderer[visibility=ENGAGEMENT_PANEL_VISIBILITY_EXPANDED]) { flex: 1; height: auto !important; min-height: 0 !important; margin: 0 !important; border: 0 !important; border-radius: 0 !important; }
+  & #panels ytd-engagement-panel-section-list-renderer[visibility=ENGAGEMENT_PANEL_VISIBILITY_EXPANDED] { max-height: none !important; background: transparent !important; }
   & #docent-related-header { position: sticky; top: -12px; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 4px; background: var(--docent-card); }
-  & #docent-related-header h2 { margin: 0; color: #eee; font: 500 14px/1.5 Roboto, Arial, sans-serif; }
-  & #docent-related-header button, & .docent-menu-item { border: 0; background: transparent; color: #eee; font: 14px/1.5 Roboto, Arial, sans-serif; cursor: pointer; }
+  & #docent-related-header h2 { margin: 0; color: #ededee; font: 500 14px/1.5 Roboto, Arial, sans-serif; }
+  & :is(.docent-menu-item, #docent-related-header button) { border: 0; background: transparent; color: #ededee; font: 14px/1.5 Roboto, Arial, sans-serif; cursor: pointer; }
   & #docent-related-header button { padding: 6px; border-radius: 6px; }
   & .docent-menu-item { display: block; width: 100%; padding: 12px 16px; text-align: left; }
-  & .docent-menu-item:hover, & #docent-related-header button:hover { background: var(--docent-fill); }
+  & :is(.docent-menu-item, #docent-related-header button):hover { background: var(--docent-fill); }
   & :is(.docent-menu-item, #docent-related-header button):focus-visible { outline: 2px solid #a9b8e8; outline-offset: -2px; }
   @media (max-width: 1000px) {
     & ytd-watch-flexy #columns { display: flex !important; flex-direction: column !important; }
@@ -148,15 +148,14 @@ html[data-docent] {
   /* Transcript rows */
   & #panels transcript-segment-view-model { display: flex !important; align-items: baseline; gap: 12px; padding: 6px 8px; border-radius: 8px; font-size: 13px !important; font-weight: 400 !important; line-height: 20px !important; color: #c9c9ce; }
   & #panels transcript-segment-view-model .ytAttributedStringHost { font-size: 13px !important; font-weight: 400 !important; }
-  & #panels .ytwTranscriptSegmentViewModelTimestamp { flex: none; min-width: 34px; background: none !important; padding: 0 !important; color: var(--docent-muted); font: 500 11px/20px ui-monospace, Menlo, monospace !important; }
+  & #panels .ytwTranscriptSegmentViewModelTimestamp { flex: none; min-width: 34px; padding: 0 !important; }
+  & #panels :is(.ytwTranscriptSegmentViewModelTimestamp, .segment-timestamp) { background: none !important; color: var(--docent-muted) !important; font: 500 11px/20px ui-monospace, Menlo, monospace !important; }
   & #panels .ytwTranscriptSegmentViewModelTimestampA11yLabel { position: absolute !important; }
-  & #panels .ytwTranscriptSegmentViewModelHostActive { background: rgba(255, 255, 255, .07); color: #fff; }
+  & #panels :is(.ytwTranscriptSegmentViewModelHostActive, ytd-transcript-segment-renderer.active) { background: var(--docent-fill) !important; border-radius: 8px; color: #fff; }
   & #panels .ytwTimelineChapterViewModelTitle { font-size: 12px !important; font-weight: 500 !important; color: var(--docent-muted) !important; margin: 12px 8px 4px !important; }
 
   /* The older transcript layout, which YouTube still serves for some videos */
-  & #panels ytd-transcript-segment-renderer .segment-timestamp { background: none !important; color: var(--docent-muted) !important; font: 500 11px/20px ui-monospace, Menlo, monospace !important; }
   & #panels ytd-transcript-segment-renderer .segment-text { font-size: 13px !important; color: #c9c9ce !important; }
-  & #panels ytd-transcript-segment-renderer.active { background: rgba(255, 255, 255, .07) !important; border-radius: 8px; }
   & #panels ytd-transcript-segment-renderer.active .segment-text { color: #fff !important; }
 
   /* Player: rounded corners, fewer buttons, and the big play button whenever the video is paused */
