@@ -95,10 +95,10 @@ async function checkSettings() {
   document.addEventListener('docent-settings', event => received.push(JSON.parse(event.detail)));
   vm.runInNewContext(fs.readFileSync(`${__dirname}/bridge.js`, 'utf8'), { chrome, document, CustomEvent, console });
   await new Promise(resolve => setImmediate(resolve));
-  assert.deepStrictEqual(received.at(-1), { enabled: false, autoScroll: true });
+  assert.deepStrictEqual(received.at(-1), { enabled: false, autoScroll: true, showDislike: false });
   await local.set({ enabled: true, panel: 'chat', autoScroll: false });
   await new Promise(resolve => setImmediate(resolve));
-  assert.deepStrictEqual(received.at(-1), { enabled: true, autoScroll: false }, 'legacy panel preferences must not reach the page');
+  assert.deepStrictEqual(received.at(-1), { enabled: true, autoScroll: false, showDislike: false }, 'legacy panel preferences must not reach the page');
   const count = received.length;
   document.dispatchEvent(new Event('docent-ready'));
   assert.strictEqual(received.length, count + 1, 'main-world startup must receive already-loaded settings');
@@ -356,6 +356,12 @@ async function checkSettings() {
   const shell = created.find(element => element.id === 'docent-rail');
   page.dispatchEvent(new CustomEvent('docent-settings', { detail: JSON.stringify({ enabled: true, autoScroll: false }) }));
   assert.strictEqual(created.find(element => element.id === 'docent-rail'), shell, 'autoscroll settings must not rebuild the view');
+  const showDislike = value => page.dispatchEvent(new CustomEvent('docent-settings', { detail: JSON.stringify({ enabled: true, autoScroll: false, showDislike: value }) }));
+  showDislike(true);
+  assert.strictEqual(attributes.has('data-docent-dislike'), true);
+  assert.strictEqual(created.find(element => element.id === 'docent-rail'), shell, 'showing Dislike must not rebuild the view');
+  showDislike('true');
+  assert.strictEqual(attributes.has('data-docent-dislike'), false, 'only a real true shows Dislike');
   page.dispatchEvent(new Event('timeupdate'));
   assert.strictEqual(scrolled, 210);
   notify(transcript, 'ENGAGEMENT_PANEL_VISIBILITY_HIDDEN');
@@ -420,7 +426,7 @@ async function checkSettings() {
   assert.strictEqual(observers.at(-1).connected, false);
 
   // The options page saves changes and follows a toggle made from another extension surface.
-  const inputs = Object.fromEntries(Object.entries({ enabled: 'checkbox', autoScroll: 'checkbox' }).map(([id, type]) => [id, { id, type }]));
+  const inputs = Object.fromEntries(Object.entries({ enabled: 'checkbox', autoScroll: 'checkbox', showDislike: 'checkbox' }).map(([id, type]) => [id, { id, type }]));
   let change;
   inputs.controls = { addEventListener: (_, listener) => { change = listener; } };
   inputs.preferences = {};
@@ -429,6 +435,7 @@ async function checkSettings() {
   await new Promise(resolve => setImmediate(resolve));
   assert.strictEqual(inputs.enabled.checked, true);
   assert.strictEqual(inputs.autoScroll.checked, false);
+  assert.strictEqual(inputs.showDislike.checked, false, 'Dislike stays hidden by default');
   inputs.autoScroll.checked = true;
   await change({ target: inputs.autoScroll });
   assert.strictEqual(values.autoScroll, true);

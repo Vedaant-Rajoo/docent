@@ -163,9 +163,15 @@ html[data-docent] {
 
   /* Buttons under the video. YouTube's menu code re-measures this row on resize and moves Save and
      Download into the overflow menu when the row wraps or loses room, so Docent only hides buttons here. */
-  & ytd-watch-metadata :is(dislike-button-view-model, #sponsor-button) { display: none !important; }
+  & ytd-watch-metadata #sponsor-button { display: none !important; }
   & ytd-watch-metadata #actions yt-button-view-model:has(button[aria-label=Clip], button[aria-label=Thanks]) { display: none !important; }
-  & ytd-watch-metadata like-button-view-model button { border-radius: 999px !important; }
+  /* Dislike stays hidden unless settings show it (data-docent-dislike). A lone Like becomes a full pill and drops
+     the Like/Dislike divider, which YouTube draws on the Like button. */
+  &:not([data-docent-dislike]) ytd-watch-metadata {
+    & dislike-button-view-model { display: none !important; }
+    & like-button-view-model button { border-radius: 999px !important; }
+    & like-button-view-model button::after { display: none !important; }
+  }
   & ytd-watch-metadata like-button-view-model button[aria-pressed=true] { color: #3ea6ff !important; background: rgba(62, 166, 255, .14) !important; }
 
   /* Title and description */

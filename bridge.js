@@ -6,7 +6,7 @@ const publish = () => {
 };
 const refresh = async () => {
   const current = ++revision;
-  const saved = await chrome.storage.local.get({ enabled: true, autoScroll: true });
+  const saved = await chrome.storage.local.get({ enabled: true, autoScroll: true, showDislike: false });
   if (current === revision) {
     settings = saved;
     publish();
@@ -15,6 +15,6 @@ const refresh = async () => {
 document.addEventListener('docent-ready', publish);
 document.addEventListener('docent-open-settings', () => chrome.runtime.sendMessage({ type: 'open-options' }).catch(console.error));
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === 'local' && ['enabled', 'autoScroll'].some(key => key in changes)) refresh().catch(console.error);
+  if (area === 'local' && ['enabled', 'autoScroll', 'showDislike'].some(key => key in changes)) refresh().catch(console.error);
 });
 refresh().catch(console.error);

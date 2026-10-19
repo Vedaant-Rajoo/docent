@@ -18,10 +18,11 @@ Comments, live chat, and Ask are YouTube's own components. Messages and question
 
 ## Saved settings
 
-Docent saves two preferences in `chrome.storage.local`:
+Docent saves three preferences in `chrome.storage.local`:
 
 - Whether Docent is enabled.
 - Whether transcript auto-scroll is enabled.
+- Whether YouTube's Dislike button is shown.
 
 These preferences apply across YouTube tabs in the same Chrome profile. They remain after a browser restart. Docent does not use Chrome's sync storage or send these preferences to its maintainer.
 

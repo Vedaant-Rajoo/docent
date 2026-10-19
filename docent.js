@@ -319,6 +319,8 @@ document.addEventListener('docent-settings', event => {
   if (!next || typeof next.enabled !== 'boolean' || typeof next.autoScroll !== 'boolean') return;
   const changed = settings?.enabled !== next.enabled;
   settings = next;
+  // docent.css shows YouTube's Dislike button for this attribute, so nothing needs rebuilding.
+  document.documentElement.toggleAttribute('data-docent-dislike', next.showDislike === true);
   if (changed) setup();
 });
 document.dispatchEvent(new Event('docent-ready'));

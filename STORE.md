@@ -10,7 +10,7 @@ Docent gives desktop YouTube a minimal layout for browsing and watching videos. 
 
 ### Storage
 
-Docent uses `chrome.storage.local` to remember whether its layout is enabled and whether transcript auto-scroll is enabled. These preferences apply across YouTube tabs in the same Chrome profile and remain after the browser restarts. Page content is not saved in extension storage.
+Docent uses `chrome.storage.local` to remember whether its layout is enabled, whether transcript auto-scroll is enabled, and whether YouTube's Dislike button is shown. These preferences apply across YouTube tabs in the same Chrome profile and remain after the browser restarts. Page content is not saved in extension storage.
 
 ### YouTube site access
 
@@ -40,7 +40,7 @@ Google requires disclosure of data handled locally, even when it is never sent t
 | User activity | Yes | Page-control clicks, the search keyboard shortcut, player events, focus, and transcript position are handled in the tab to operate the interface. Docent does not log clicks or keystrokes. |
 | Website content | Yes | YouTube guide data, channel image URLs, native panel structure, transcript row state, and player information are used to display the interface. No copy is saved in extension storage. |
 
-The extension saves only its enabled and transcript auto-scroll preferences in `chrome.storage.local`. They are not synced by Docent. Page data is used in tab memory. Cached guide data can remain until the tab is closed or fully reloaded.
+The extension saves only its enabled, transcript auto-scroll, and Dislike button preferences in `chrome.storage.local`. They are not synced by Docent. Page data is used in tab memory. Cached guide data can remain until the tab is closed or fully reloaded.
 
 Requests to YouTube's guide service and channel image URLs go through the existing browser session. Interactions with native YouTube features continue to use YouTube's services. The extension does not send a separate copy of page data or preferences to its maintainer.
 

@@ -48,7 +48,7 @@ After updating the source files, click Reload on Docent's card at `chrome://exte
 
 Pin Docent from Chrome's Extensions menu. Click its toolbar icon to turn the layout off or on across your open YouTube tabs. An `OFF` badge appears while disabled.
 
-Open settings from the gear at the bottom of Docent's rail, or right-click its toolbar icon and choose Options. Settings open in a separate tab. You can turn Docent off or disable transcript auto-scroll there. Changes save locally in your Chrome profile.
+Open settings from the gear at the bottom of Docent's rail, or right-click its toolbar icon and choose Options. Settings open in a separate tab. You can turn Docent off, disable transcript auto-scroll, or show YouTube's Dislike button there. Changes save locally in your Chrome profile.
 
 ## Known limitations
 
