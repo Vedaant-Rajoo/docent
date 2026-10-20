@@ -2,32 +2,39 @@
 
 Docent is a Chrome extension that gives desktop YouTube a smaller interface, with an icon rail and a shared column beside the video.
 
-This is an alpha. It requires YouTube's dark theme and runs on `https://www.youtube.com/`.
+This is an alpha. It requires Chrome 111 or newer and YouTube's dark theme, and runs on `https://www.youtube.com/`.
 
 ## What it changes
 
-- A compact header and navigation rail on the home and watch pages. The rail includes library links and subscribed channels. Home categories keep YouTube's filters, with simpler styling.
+- A compact header and navigation rail across YouTube. The rail includes library links and subscribed channels. Home categories keep YouTube's filters, with simpler styling.
 - One watch panel at a time. Open Ask, chapters, transcripts, or comments through YouTube's own controls when available. A Recommended button in the header opens video recommendations.
-- Native live chat and playlists use the same space. When available, you can return to them through the video's More actions menu.
+- Live streams and videos with chat replay get a chat button in the header. Press a panel button to show or hide it; choosing another replaces the open panel. Playlists remain available through the video's More actions menu.
 - The transcript follows the current line during playback. Hover over the transcript to read without automatic scrolling.
-- Player controls include a speed button that cycles through 1×, 1.25×, 1.5×, and 2×, plus a resolution list using the qualities YouTube provides. YouTube's autoplay toggle and settings remain available.
-- Theater mode hides the watch column. Fullscreen shows only the player.
+- A quieter player bar shows the current speed and resolution, each a list of the choices YouTube offers, followed by captions, picture-in-picture, YouTube's settings, and fullscreen. YouTube's autoplay toggle remains available.
+- Closing the watch column gives the video its full width. The separate theater control is hidden. Fullscreen shows only the player.
 
-The home header keeps YouTube's Create and notifications controls when available to your account. Press `Cmd+K` on macOS or `Ctrl+K` elsewhere to focus search.
+The home header keeps YouTube's Create and notifications controls when available to your account. Press `Cmd+K` on macOS or `Ctrl+K` elsewhere to focus search, and press it again to leave search.
 
-## Install from source
+## Install
 
-There is no build step.
+[Install Docent from the Chrome Web Store](https://chromewebstore.google.com/detail/docent-for-youtube/jgacckehokmmgehdilofhbjdknipfcbg) for automatic updates.
 
-1. Get a source copy of Docent and extract it. If you have access to this repository, you can clone it:
+### Install without the Store
 
-   ```sh
-   git clone https://github.com/Vedaant-Rajoo/docent.git
-   ```
+1. Download `docent.zip` from [GitHub Releases](https://github.com/Vedaant-Rajoo/docent/releases).
+2. Extract it to a permanent folder. Open `chrome://extensions` and enable **Developer mode**.
+3. Choose **Load unpacked** and select the extracted folder containing `manifest.json`.
+4. Reload YouTube tabs and use YouTube's dark theme.
 
-2. Open `chrome://extensions` in Chrome and turn on **Developer mode**.
-3. Choose **Load unpacked** and select the `docent` folder containing `manifest.json`.
-4. Reload any open YouTube tabs. Set YouTube's Appearance to **Dark theme** if the layout does not appear.
+Updates to unpacked installs are manual. Replace the files in the same folder, reload Docent at `chrome://extensions`, then reload YouTube tabs. Keep that folder in place while Docent is installed. This package targets desktop Chrome; other browsers have not been tested.
+
+### Install from source
+
+There is no build step. Clone the repository, then follow steps 2 to 4 above with the cloned `docent` folder.
+
+```sh
+git clone https://github.com/Vedaant-Rajoo/docent.git
+```
 
 After updating the source files, click Reload on Docent's card at `chrome://extensions`, then reload YouTube.
 
@@ -35,7 +42,7 @@ After updating the source files, click Reload on Docent's card at `chrome://exte
 
 Pin Docent from Chrome's Extensions menu. Click its toolbar icon to turn the layout off or on across your open YouTube tabs. An `OFF` badge appears while disabled.
 
-Open settings from the gear at the bottom of Docent's rail, or right-click its toolbar icon and choose Options. Settings open in a separate tab. You can turn Docent off or disable transcript auto-scroll there. Changes save locally in your Chrome profile.
+Open settings from the gear at the bottom of Docent's rail, or right-click its toolbar icon and choose Options. Settings open in a separate tab. You can turn Docent off, disable transcript auto-scroll, or show YouTube's Dislike button there. Changes save locally in your Chrome profile.
 
 ## Known limitations
 
@@ -43,7 +50,7 @@ Open settings from the gear at the bottom of Docent's rail, or right-click its t
 - YouTube's light theme leaves Docent inactive. Some controls depend on YouTube's English labels.
 - YouTube changes its page structure and tests different layouts. Updates can break parts of Docent.
 - Ask, transcripts, chapters, chat, and other native features appear only where YouTube provides them. Docent does not add an AI service.
-- New subscriptions appear in the rail after a page reload. Notes are not implemented.
+- New subscriptions appear in the rail after a page reload.
 
 ## Report a bug
 
@@ -53,13 +60,13 @@ Treat bug reports as public. Remove account details, private video links, and pe
 
 ## Check a change
 
-With Node.js installed, run this from the repository:
+With Node.js 26 installed, run this from the repository:
 
 ```sh
 node check.js
 ```
 
-The script checks settings, extension toggling, transcript scrolling, and panel switching using simulated browser APIs and page elements. Check layout changes on YouTube too; this script cannot verify how the page looks or whether YouTube has changed its markup.
+The script checks settings, extension toggling, the player bar, chat and panel switching, transcript scrolling, and navigation using simulated browser APIs and page elements. Check layout changes on YouTube too; this script cannot verify how the page looks or whether YouTube has changed its markup.
 
 ## Privacy and license
 

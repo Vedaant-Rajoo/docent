@@ -1,8 +1,10 @@
 {
   "manifest_version": 3,
   "name": "Docent for YouTube",
-  "version": "0.1.0",
+  "version": "0.1.1",
+  "minimum_chrome_version": "111",
   "description": "A minimal YouTube layout with an icon rail and native panels that open when you need them.",
+  "icons": { "128": "icons/icon128.png" },
   "permissions": ["storage"],
   "background": { "service_worker": "background.js" },
   "action": { "default_title": "Disable Docent" },

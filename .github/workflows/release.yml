@@ -1,0 +1,156 @@
+name: Chrome Web Store
+
+on:
+  pull_request:
+  release:
+    types: [published]
+  # ponytail: Maintainers choose versions; add a release bot when manual bumps become frequent.
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Check status, upload a draft, or upload and submit for review
+        type: choice
+        default: status
+        options: [status, upload, publish]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '26'
+      - run: |
+          node check.js
+          python3 .github/check-release.py
+
+  store:
+    needs: check
+    # ponytail: Publishing is owner-only; add trusted maintainer IDs here and in Cloud trust when needed.
+    if: github.actor_id == '33187221' && (github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      id-token: write
+    concurrency:
+      group: chrome-web-store
+      cancel-in-progress: false
+    env:
+      CWS_ITEM: publishers/a4703a5d-1aa1-41ad-8169-efffa966d661/items/jgacckehokmmgehdilofhbjdknipfcbg
+      RELEASE_TAG: ${{ github.event.release.tag_name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Validate release
+        if: github.event_name == 'release'
+        run: |
+          set -euo pipefail
+          version=$(jq -er '.version' manifest.json)
+          if ! [[ "$RELEASE_TAG" =~ ^v[0-9]+(\.[0-9]+){0,3}$ ]] || [ "$RELEASE_TAG" != "v$version" ]; then
+            echo "Release tag must match the manifest version: v$version" >&2
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor HEAD origin/main; then
+            echo "Release commit must belong to main." >&2
+            exit 1
+          fi
+
+      - name: Package ZIP
+        if: github.event_name == 'release' || inputs.operation != 'status'
+        run: |
+          git archive --format=zip --output=docent.zip HEAD \
+            manifest.json background.js bridge.js docent.js docent.css \
+            settings.html settings.js icons LICENSE
+
+      - name: Attach release ZIP
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          assets=$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json assets)
+          if jq -e '.assets | any(.name == "docent.zip")' <<< "$assets" > /dev/null; then
+            asset_dir=$(mktemp -d)
+            gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --pattern docent.zip --dir "$asset_dir"
+            if ! cmp -s docent.zip "$asset_dir/docent.zip"; then
+              echo "Existing docent.zip differs from this commit. Release asset left unchanged." >&2
+              exit 1
+            fi
+          else
+            gh release upload "$RELEASE_TAG" docent.zip --repo "$GITHUB_REPOSITORY"
+          fi
+
+      - name: Authenticate without a key
+        if: github.event_name != 'release' || !github.event.release.prerelease
+        id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          project_id: docent-publisher
+          workload_identity_provider: projects/546702080528/locations/global/workloadIdentityPools/docent-github/providers/github
+          service_account: docent-publisher@docent-publisher.iam.gserviceaccount.com
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/chromewebstore
+          create_credentials_file: false
+
+      - name: Run Store operation
+        if: github.event_name != 'release' || !github.event.release.prerelease
+        env:
+          ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
+          STORE_OPERATION: ${{ github.event_name == 'release' && 'publish' || inputs.operation }}
+        run: |
+          set -euo pipefail
+          case "$STORE_OPERATION" in
+            status|upload|publish) ;;
+            *) echo "Unknown Store operation: $STORE_OPERATION" >&2; exit 1 ;;
+          esac
+          api=https://chromewebstore.googleapis.com
+          authorization="Authorization: Bearer $ACCESS_TOKEN"
+          status=$(curl --fail-with-body --silent --show-error --max-time 30 \
+            --header "$authorization" "$api/v2/$CWS_ITEM:fetchStatus")
+          jq . <<< "$status"
+          if [ "$STORE_OPERATION" = status ]; then exit 0; fi
+
+          state=$(jq -r '.submittedItemRevisionStatus.state // empty' <<< "$status")
+          if [ "$state" = PENDING_REVIEW ] || [ "$state" = STAGED ]; then
+            echo "Existing submission is $state. Finish it in the Store dashboard before uploading."
+            exit 1
+          fi
+
+          upload=$(curl --fail-with-body --silent --show-error --max-time 120 \
+            --request POST --header "$authorization" \
+            --header 'Content-Type: application/zip' \
+            --upload-file docent.zip "$api/upload/v2/$CWS_ITEM:upload")
+          jq . <<< "$upload"
+          state=$(jq -r '.uploadState // empty' <<< "$upload")
+          for attempt in {1..12}; do
+            if [ "$state" != IN_PROGRESS ]; then break; fi
+            sleep 5
+            status=$(curl --fail-with-body --silent --show-error --max-time 30 \
+              --header "$authorization" "$api/v2/$CWS_ITEM:fetchStatus")
+            state=$(jq -r '.lastAsyncUploadState // empty' <<< "$status")
+          done
+          if [ "$state" != SUCCEEDED ]; then
+            echo "Upload did not succeed: $state. Check the Store dashboard before retrying."
+            exit 1
+          fi
+
+          if [ "$STORE_OPERATION" = publish ]; then
+            published=$(curl --fail-with-body --silent --show-error --max-time 120 \
+              --request POST --header "$authorization" \
+              --header 'Content-Type: application/json' \
+              --data '{"blockOnWarnings":true}' "$api/v2/$CWS_ITEM:publish")
+            jq . <<< "$published"
+            jq -e '.state == "PENDING_REVIEW" or .state == "STAGED" or .state == "PUBLISHED" or .state == "PUBLISHED_TO_TESTERS"' <<< "$published"
+          fi

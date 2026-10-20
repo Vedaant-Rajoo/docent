@@ -2,7 +2,7 @@
 
 Docent for YouTube is maintained by Vedaant Rajoo.
 
-Last updated: October 18, 2026
+Last updated: October 19, 2026
 
 Docent changes the layout of desktop YouTube. It uses information in your YouTube tab to display navigation, manage native panels, and provide playback controls. The extension has no developer-operated server or analytics service.
 
@@ -10,7 +10,7 @@ Docent changes the layout of desktop YouTube. It uses information in your YouTub
 
 Docent reads the current YouTube page address and video identifier to apply the right layout as you navigate. It uses YouTube's guide data to show subscribed channels in the rail, including channel names, identifiers, image URLs, and indicators for new videos.
 
-The extension also uses player state, available video qualities, panel visibility, and transcript row positions. It handles clicks on page controls and the search keyboard shortcut to open panels and restore focus. Your browser's platform name determines whether the shortcut hint says Cmd or Ctrl. Docent does not keep a record of clicks, keystrokes, or videos watched.
+The extension also uses player state, available playback speeds and video qualities, whether the video offers live chat or chat replay, panel visibility, and transcript row positions. It handles clicks on page controls and the search keyboard shortcut to open panels and restore focus. Your browser's platform name determines whether the shortcut hint says Cmd or Ctrl. Docent does not keep a record of clicks, keystrokes, or videos watched.
 
 This information stays in the tab's memory. Docent does not save a copy of YouTube page content in extension storage. Cached guide data can remain until the tab is closed or fully reloaded.
 
@@ -18,10 +18,11 @@ Comments, live chat, and Ask are YouTube's own components. Messages and question
 
 ## Saved settings
 
-Docent saves two preferences in `chrome.storage.local`:
+Docent saves three preferences in `chrome.storage.local`:
 
 - Whether Docent is enabled.
 - Whether transcript auto-scroll is enabled.
+- Whether YouTube's Dislike button is shown.
 
 These preferences apply across YouTube tabs in the same Chrome profile. They remain after a browser restart. Docent does not use Chrome's sync storage or send these preferences to its maintainer.
 
