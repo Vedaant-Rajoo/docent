@@ -169,7 +169,7 @@ async function check() {
   };
   page.createElementNS = (_, tag) => page.createElement(tag);
   page.body = node();
-  page.querySelector = selector => selector === 'ytd-masthead #end' ? {} : null;
+  page.querySelector = selector => selector === 'ytd-masthead' ? {} : null;
   page.querySelectorAll = selector => selector === '[data-docent-node]' ? created.filter(element => 'docentNode' in element.dataset) : [];
   main.location.pathname = '/';
   const setPage = enabled => page.dispatchEvent(new CustomEvent('docent-settings', { detail: { enabled, autoScroll: true } }));
@@ -284,7 +284,7 @@ async function check() {
     : selector === '[data-docent-chat-entry]' ? cards.filter(card => card.hasAttribute('data-docent-chat-entry'))
     : panels.children.filter(panel => panel.getAttribute('visibility') === 'ENGAGEMENT_PANEL_VISIBILITY_EXPANDED');
   page.querySelector = selector => {
-    if (selector === 'ytd-masthead #end') return { prepend() {} };
+    if (selector === 'ytd-masthead') return {};
     if (selector === 'ytd-watch-flexy') return watch;
     if (selector === '#panels > [data-docent-native]') return panels.querySelectorAll()[0] ?? null;
     if (selector === '.ytp-size-button') return { click: () => { theater = !theater; } };
