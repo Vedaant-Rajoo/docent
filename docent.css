@@ -25,7 +25,7 @@ html[data-docent] {
   & yt-searchbox input.ytSearchboxComponentInput { padding-right: 40px !important; }
   & ytd-masthead #container { justify-content: center !important; }
   /* Keep search clear of the header controls. */
-  & ytd-masthead #center { flex: 0 1 520px !important; max-width: calc(100vw - 440px) !important; margin: 0 !important; }
+  & ytd-masthead #center { flex: 0 1 520px !important; max-width: calc(100% - 460px) !important; margin: 0 !important; }
   & ytd-masthead .ytSearchboxComponentInputBox { border-radius: 10px !important; background: #18181b !important; border-color: var(--docent-line) !important; }
   & yt-searchbox { position: relative; }
   & #docent-kbd { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font: 500 11px/1 Roboto, Arial, sans-serif; color: var(--docent-muted); border: 1px solid var(--docent-line); border-radius: 6px; padding: 4px 6px; pointer-events: none; }
@@ -40,19 +40,23 @@ html[data-docent] {
      pages docent.js puts its panel buttons in this row, so they sit beside it at any width. */
   & ytd-masthead #end { display: flex !important; gap: 4px; position: fixed; top: 10px; right: 64px; height: 36px; min-width: 0 !important; padding: 0 !important; z-index: 2100; }
   & ytd-masthead #end > :not(#buttons, #docent-panels) { display: none !important; }
-  & ytd-masthead #end > #docent-panels { position: static; order: -1; }
+  & ytd-masthead #end > #docent-panels { position: static; }
   & ytd-masthead #buttons { display: flex; gap: 4px; margin: 0 !important; }
   /* ponytail: Create here and Clip/Thanks under the video match YouTube's English aria-labels; tag those buttons with a data-docent-* marker from docent.js when supporting other UI languages. */
-  &:not([data-docent-home]) ytd-masthead #buttons:not(:has(a[href*="ServiceLogin"])) > :not(:has(#avatar-btn)),
-  &[data-docent-home] ytd-masthead #buttons:not(:has(a[href*="ServiceLogin"])) > :not(ytd-notification-topbar-button-renderer, :has(#avatar-btn, [aria-label=Create])) { display: none !important; }
+  /* Signed in, only the avatar stays (plus Create and notifications on home). Without an avatar, every
+     button shows, so a markup change leaves the menu reachable rather than hiding it. */
+  &:not([data-docent-home]) ytd-masthead #buttons:has(#avatar-btn) > :not(:has(#avatar-btn)),
+  &[data-docent-home] ytd-masthead #buttons:has(#avatar-btn) > :not(ytd-notification-topbar-button-renderer, :has(#avatar-btn, [aria-label=Create])) { display: none !important; }
   & ytd-masthead #buttons > * { width: 36px !important; height: 36px !important; margin: 0 !important; padding: 0 !important; }
-  & ytd-masthead #buttons :is(yt-icon-button, button:not(#avatar-btn), a[href*="ServiceLogin"]) { width: 36px !important; height: 36px !important; }
+  & ytd-masthead #buttons :is(yt-icon-button, button, a[href*="ServiceLogin"]) { width: 36px !important; height: 36px !important; }
+  /* YouTube pads the avatar button to 54px; centre the 32px picture in the same 36px slot instead. */
+  & ytd-masthead #avatar-btn { display: grid !important; place-items: center; padding: 0 !important; margin: 0 !important; border: 0 !important; background: transparent !important; cursor: pointer; }
+  & ytd-masthead #avatar-btn yt-img-shadow { margin: 0 !important; }
   & ytd-masthead #buttons yt-icon-button { padding: 0 !important; }
   & ytd-masthead #buttons :is(button:not(#avatar-btn), a[href*="ServiceLogin"]) { box-sizing: border-box; display: grid !important; place-items: center; border: 0 !important; border-radius: 10px !important; padding: 8px !important; background: transparent !important; color: var(--docent-text) !important; cursor: pointer; }
   & ytd-masthead #buttons :is(button:not(#avatar-btn), a[href*="ServiceLogin"]):hover { background: var(--docent-fill) !important; }
   & ytd-masthead #buttons yt-icon { width: 20px !important; height: 20px !important; }
   /* Sign in as an icon like its neighbours; the link's aria-label still names it. */
-  & ytd-masthead a[href*="ServiceLogin"] { padding: 6px !important; }
   & ytd-masthead a[href*="ServiceLogin"] > :not([aria-hidden]) { display: none !important; }
   & ytd-masthead button[aria-label=Create] > :not(yt-touch-feedback-shape, yt-interaction) { display: none !important; }
   & ytd-masthead button[aria-label=Create]::before { content: '+'; font: 300 26px/20px Arial, sans-serif; }
