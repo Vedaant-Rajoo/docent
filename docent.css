@@ -29,18 +29,16 @@ html[data-docent] {
   & ytd-masthead .ytSearchboxComponentInputBox { border-radius: 10px !important; background: #18181b !important; border-color: var(--docent-line) !important; }
   & yt-searchbox { position: relative; }
   & #docent-kbd { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font: 500 11px/1 Roboto, Arial, sans-serif; color: var(--docent-muted); border: 1px solid var(--docent-line); border-radius: 6px; padding: 4px 6px; pointer-events: none; }
-  & :is(#docent-logo, #docent-nav, #docent-reload, #docent-panels) { position: fixed; top: 10px; z-index: 2100; }
+  & :is(#docent-logo, #docent-nav, #docent-reload) { position: fixed; top: 10px; z-index: 2100; }
   & :is(#docent-nav, #docent-reload, #docent-panels) { display: flex; gap: 4px; }
   & #docent-nav { left: 80px; }
   & #docent-reload { right: 16px; }
-  & #docent-panels { right: 64px; }
   & #docent-panels [hidden] { display: none; }
   /* YouTube's own account control stays on every page, keeping its menu handlers: the avatar when signed
      in, or the ⋮ menu and Sign in when signed out. Home also keeps Create and notifications. On watch
      pages docent.js puts its panel buttons in this row, so they sit beside it at any width. */
   & ytd-masthead #end { display: flex !important; gap: 4px; position: fixed; top: 10px; right: 64px; height: 36px; min-width: 0 !important; padding: 0 !important; z-index: 2100; }
   & ytd-masthead #end > :not(#buttons, #docent-panels) { display: none !important; }
-  & ytd-masthead #end > #docent-panels { position: static; }
   & ytd-masthead #buttons { display: flex; gap: 4px; margin: 0 !important; }
   /* ponytail: Create here and Clip/Thanks under the video match YouTube's English aria-labels; tag those buttons with a data-docent-* marker from docent.js when supporting other UI languages. */
   /* Signed in, only the avatar stays (plus Create and notifications on home). Without an avatar, every
@@ -228,7 +226,7 @@ html[data-docent] {
   &:has(:fullscreen, ytd-watch-flexy[fullscreen]) {
     & ytd-app { --app-drawer-width: 0px; --ytd-mini-guide-width: 0px; --ytd-persistent-guide-width: 0px; }
     & ytd-watch-flexy { --ytd-watch-flexy-sidebar-width: 0px !important; --ytd-watch-flexy-sidebar-min-width: 0px !important; }
-    & :is(#docent-logo, #docent-rail, #docent-nav, #docent-reload, #docent-panels, ytd-masthead),
+    & :is(#docent-logo, #docent-rail, #docent-nav, #docent-reload, ytd-masthead),
     & ytd-watch-flexy :is(#secondary, #below, #panels, #chat-container) { display: none !important; }
     & ytd-page-manager#page-manager { margin: 0 !important; }
     & ytd-player#ytd-player, & #ytd-player #container, & #movie_player { border-radius: 0 !important; }
