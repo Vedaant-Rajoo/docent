@@ -28,6 +28,12 @@ The header keeps YouTube's account menu on every page, or its settings menu and 
 
 Updates to unpacked installs are manual. Replace the files in the same folder, reload Docent at `chrome://extensions`, then reload YouTube tabs. Keep that folder in place while Docent is installed. This package targets desktop Chrome; other browsers have not been tested.
 
+### Try a beta build
+
+Beta builds come from the `dev` branch before they reach the Store. They appear on [GitHub Releases](https://github.com/Vedaant-Rajoo/docent/releases) as pre-releases tagged like `v0.2.0-beta.1`. Install one with the steps above.
+
+A beta loaded this way runs beside the Store version, and both restyle YouTube. Turn off the Store version at `chrome://extensions` while you test. The beta keeps its own settings, and it does not update itself.
+
 ### Install from source
 
 There is no build step. Clone the repository, then follow steps 2 to 4 above with the cloned `docent` folder.

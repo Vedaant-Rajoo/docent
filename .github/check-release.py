@@ -60,19 +60,33 @@ with tempfile.TemporaryDirectory(prefix="docent-package-check-") as directory:
             resources.extend(script.get("js", []) + script.get("css", []))
         assert set(resources) <= set(package.namelist()), "ZIP is missing manifest resources"
 
-    for tag, success in [(f"v{version}", True), (f"v{version}.invalid", False), ("v0.1.0;touch injected", False)]:
+    git("update-ref", "refs/remotes/origin/dev", "HEAD")
+
+    def validates(tag, prerelease="false"):
         result = subprocess.run(["bash", "-c", validate], cwd=root, text=True,
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            env={**os.environ, "RELEASE_TAG": tag})
-        assert (result.returncode == 0) == success, result.stdout
+            env={**os.environ, "RELEASE_TAG": tag, "PRERELEASE": prerelease})
+        return result.returncode == 0, result.stdout
+
+    for tag, prerelease, success in [
+        (f"v{version}", "false", True), (f"v{version}.invalid", "false", False), ("v0.1.0;touch injected", "false", False),
+        (f"v{version}-beta.1", "false", False), (f"v{version}-beta.1", "true", True), (f"v{version}", "true", False),
+        (f"v{version}-beta.x", "true", False), ("v0.0.9-beta.1", "true", False), (f"v{version}-beta.1;touch injected", "true", False),
+    ]:
+        ok, output = validates(tag, prerelease)
+        assert ok == success, (tag, prerelease, output)
     assert not (root / "injected").exists()
-    (root / "unreviewed").write_text("This commit is not on origin/main.")
+    (root / "unreviewed").write_text("This commit is on neither origin/main nor origin/dev.")
     git("add", "unreviewed")
     git("commit", "--quiet", "-m", "Unreviewed commit")
-    result = subprocess.run(["bash", "-c", validate], cwd=root, text=True,
-        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-        env={**os.environ, "RELEASE_TAG": f"v{version}"})
-    assert result.returncode != 0 and "must belong to main" in result.stdout, result.stdout
+    ok, output = validates(f"v{version}")
+    assert not ok and "must belong to main" in output, output
+    ok, output = validates(f"v{version}-beta.1", "true")
+    assert not ok and "must belong to dev" in output, output
+    # A commit on dev but not main can ship as a beta, never as a release.
+    git("update-ref", "refs/remotes/origin/dev", "HEAD")
+    assert validates(f"v{version}-beta.1", "true")[0]
+    assert not validates(f"v{version}")[0]
 
 asset_mock = r'''
 gh() {

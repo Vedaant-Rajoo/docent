@@ -55,15 +55,27 @@ jobs:
 
       - name: Validate release
         if: github.event_name == 'release'
+        env:
+          PRERELEASE: ${{ github.event.release.prerelease }}
         run: |
           set -euo pipefail
           version=$(jq -er '.version' manifest.json)
-          if ! [[ "$RELEASE_TAG" =~ ^v[0-9]+(\.[0-9]+){0,3}$ ]] || [ "$RELEASE_TAG" != "v$version" ]; then
-            echo "Release tag must match the manifest version: v$version" >&2
-            exit 1
+          # Pre-releases are beta builds from dev, tagged v<version>-beta.<n>. The Store steps skip them.
+          if [ "${PRERELEASE:-false}" = true ]; then
+            branch=dev
+            if ! [[ "$RELEASE_TAG" =~ ^v[0-9]+(\.[0-9]+){0,3}-beta\.[0-9]+$ ]] || [ "${RELEASE_TAG%-beta.*}" != "v$version" ]; then
+              echo "Pre-release tag must be the manifest version plus a beta number: v$version-beta.1" >&2
+              exit 1
+            fi
+          else
+            branch=main
+            if ! [[ "$RELEASE_TAG" =~ ^v[0-9]+(\.[0-9]+){0,3}$ ]] || [ "$RELEASE_TAG" != "v$version" ]; then
+              echo "Release tag must match the manifest version: v$version" >&2
+              exit 1
+            fi
           fi
-          if ! git merge-base --is-ancestor HEAD origin/main; then
-            echo "Release commit must belong to main." >&2
+          if ! git merge-base --is-ancestor HEAD "origin/$branch"; then
+            echo "Release commit must belong to $branch." >&2
             exit 1
           fi
 
