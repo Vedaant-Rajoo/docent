@@ -20,12 +20,12 @@ html[data-docent] {
   & ytd-app { --app-drawer-width: 64px; --ytd-mini-guide-width: 64px; --ytd-persistent-guide-width: 64px; }
 
   /* Header: the search box alone in the middle, plus Docent's buttons */
-  & ytd-masthead :is(#start, #end, #voice-search-button, .ytSearchboxComponentSearchButton, .ytSearchboxComponentClearButtonWrapper) { display: none !important; }
+  & ytd-masthead :is(#start, #voice-search-button, .ytSearchboxComponentSearchButton, .ytSearchboxComponentClearButtonWrapper) { display: none !important; }
   /* Room for the ⌘K hint where YouTube's hidden clear button was. */
   & yt-searchbox input.ytSearchboxComponentInput { padding-right: 40px !important; }
   & ytd-masthead #container { justify-content: center !important; }
   /* Keep search clear of the header controls. */
-  & ytd-masthead #center { flex: 0 1 520px !important; max-width: calc(100vw - 320px) !important; margin: 0 !important; }
+  & ytd-masthead #center { flex: 0 1 520px !important; max-width: calc(100vw - 440px) !important; margin: 0 !important; }
   & ytd-masthead .ytSearchboxComponentInputBox { border-radius: 10px !important; background: #18181b !important; border-color: var(--docent-line) !important; }
   & yt-searchbox { position: relative; }
   & #docent-kbd { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font: 500 11px/1 Roboto, Arial, sans-serif; color: var(--docent-muted); border: 1px solid var(--docent-line); border-radius: 6px; padding: 4px 6px; pointer-events: none; }
@@ -35,25 +35,31 @@ html[data-docent] {
   & #docent-reload { right: 16px; }
   & #docent-panels { right: 64px; }
   & #docent-panels [hidden] { display: none; }
-  /* Keep YouTube's menu handlers, notification count and account eligibility. */
-  &[data-docent-home] ytd-masthead {
-    & #center { max-width: calc(100vw - 360px) !important; }
-    & #end { display: flex !important; position: fixed; top: 10px; right: 64px; height: 36px; min-width: 0 !important; padding: 0 !important; z-index: 2100; }
-    /* ponytail: Create here and Clip/Thanks under the video match YouTube's English aria-labels; tag those buttons with a data-docent-* marker from docent.js when supporting other UI languages. */
-    & #end > :not(#buttons), & #buttons > :not(ytd-notification-topbar-button-renderer, :has([aria-label=Create])) { display: none !important; }
-    & #buttons { display: flex; gap: 4px; margin: 0 !important; }
-    & #buttons > :is(ytd-notification-topbar-button-renderer, :has([aria-label=Create])) { width: 36px !important; height: 36px !important; margin: 0 !important; padding: 0 !important; }
-    & #end :is(yt-icon-button, button) { width: 36px !important; height: 36px !important; }
-    & #end button { box-sizing: border-box; display: grid !important; place-items: center; border: 0 !important; border-radius: 10px !important; padding: 8px !important; background: transparent !important; color: var(--docent-text) !important; cursor: pointer; }
-    & #end button:hover { background: var(--docent-fill) !important; }
-    & #end yt-icon { width: 20px !important; height: 20px !important; }
-    & button[aria-label=Create] > :not(yt-touch-feedback-shape, yt-interaction) { display: none !important; }
-    & button[aria-label=Create]::before { content: '+'; font: 300 26px/20px Arial, sans-serif; }
-  }
+  /* YouTube's own account control stays on every page, keeping its menu handlers: the avatar when signed
+     in, or the ⋮ menu and Sign in when signed out. Home also keeps Create and notifications. On watch
+     pages docent.js puts its panel buttons in this row, so they sit beside it at any width. */
+  & ytd-masthead #end { display: flex !important; gap: 4px; position: fixed; top: 10px; right: 64px; height: 36px; min-width: 0 !important; padding: 0 !important; z-index: 2100; }
+  & ytd-masthead #end > :not(#buttons, #docent-panels) { display: none !important; }
+  & ytd-masthead #end > #docent-panels { position: static; order: -1; }
+  & ytd-masthead #buttons { display: flex; gap: 4px; margin: 0 !important; }
+  /* ponytail: Create here and Clip/Thanks under the video match YouTube's English aria-labels; tag those buttons with a data-docent-* marker from docent.js when supporting other UI languages. */
+  &:not([data-docent-home]) ytd-masthead #buttons:not(:has(a[href*="ServiceLogin"])) > :not(:has(#avatar-btn)),
+  &[data-docent-home] ytd-masthead #buttons:not(:has(a[href*="ServiceLogin"])) > :not(ytd-notification-topbar-button-renderer, :has(#avatar-btn, [aria-label=Create])) { display: none !important; }
+  & ytd-masthead #buttons > * { width: 36px !important; height: 36px !important; margin: 0 !important; padding: 0 !important; }
+  & ytd-masthead #buttons :is(yt-icon-button, button:not(#avatar-btn), a[href*="ServiceLogin"]) { width: 36px !important; height: 36px !important; }
+  & ytd-masthead #buttons yt-icon-button { padding: 0 !important; }
+  & ytd-masthead #buttons :is(button:not(#avatar-btn), a[href*="ServiceLogin"]) { box-sizing: border-box; display: grid !important; place-items: center; border: 0 !important; border-radius: 10px !important; padding: 8px !important; background: transparent !important; color: var(--docent-text) !important; cursor: pointer; }
+  & ytd-masthead #buttons :is(button:not(#avatar-btn), a[href*="ServiceLogin"]):hover { background: var(--docent-fill) !important; }
+  & ytd-masthead #buttons yt-icon { width: 20px !important; height: 20px !important; }
+  /* Sign in as an icon like its neighbours; the link's aria-label still names it. */
+  & ytd-masthead a[href*="ServiceLogin"] { padding: 6px !important; }
+  & ytd-masthead a[href*="ServiceLogin"] > :not([aria-hidden]) { display: none !important; }
+  & ytd-masthead button[aria-label=Create] > :not(yt-touch-feedback-shape, yt-interaction) { display: none !important; }
+  & ytd-masthead button[aria-label=Create]::before { content: '+'; font: 300 26px/20px Arial, sans-serif; }
   & .docent-icon { all: unset; flex: none; cursor: pointer; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 10px; color: var(--docent-text); }
   & .docent-icon:hover { background: var(--docent-fill); }
   & #docent-panels [aria-pressed=true] { background: #ededee; color: #141416; }
-  & :is(.docent-icon, ytd-masthead #end button):focus-visible { outline: 2px solid var(--docent-ring); outline-offset: 2px; }
+  & :is(.docent-icon, ytd-masthead #buttons :is(button, a)):focus-visible { outline: 2px solid var(--docent-ring); outline-offset: 2px; }
 
   /* Icon rail */
   & #docent-logo { left: 14px; width: 36px; height: 36px; display: grid; place-items: center; }

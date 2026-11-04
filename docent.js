@@ -233,7 +233,7 @@ function setup(tries = 0) {
   };
   const recommended = Object.assign(iconButton('related', 'Recommended videos', () => toggle('related', recommended)), { id: 'docent-recommended', type: 'button', ariaControls: 'related' });
   const chat = Object.assign(iconButton('chat', 'Live chat', () => toggle('chat', chat)), { id: 'docent-chat', type: 'button', ariaControls: 'chat' });
-  document.body.append(el('div', { id: 'docent-panels', role: 'group', ariaLabel: 'Video panels' }, chat, recommended));
+  ($('ytd-masthead #end') ?? document.body).append(el('div', { id: 'docent-panels', role: 'group', ariaLabel: 'Video panels' }, chat, recommended));
   const syncChat = () => {
     const data = chatData();
     chat.hidden = !data;
