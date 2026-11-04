@@ -13,7 +13,7 @@ This is an alpha. It requires Chrome 111 or newer and YouTube's dark theme, and 
 - A quieter player bar shows the current speed and resolution, each a list of the choices YouTube offers, followed by captions, picture-in-picture, YouTube's settings, and fullscreen. YouTube's autoplay toggle remains available.
 - Closing the watch column gives the video its full width. The separate theater control is hidden. Fullscreen shows only the player.
 
-The home header keeps YouTube's Create and notifications controls when available to your account. Press `Cmd+K` on macOS or `Ctrl+K` elsewhere to focus search, and press it again to leave search.
+The header keeps YouTube's account menu on every page, or its settings menu and Sign in when you are signed out. On Home it also keeps Create and notifications when available to your account. Press `Cmd+K` on macOS or `Ctrl+K` elsewhere to focus search, and press it again to leave search.
 
 ## Install
 

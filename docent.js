@@ -142,7 +142,7 @@ function setup(tries = 0) {
   // yt-navigate-finish fires before the watch page shows the new video. On first load the
   // description isn't rendered yet, and after in-app navigation the previous video's transcript
   // button is still there. ytd-watch-flexy's video-id switches once the new metadata is in.
-  if (tries < 100 && (!$('ytd-masthead') || (onWatchPage && $('ytd-watch-flexy')?.getAttribute('video-id') !== new URLSearchParams(location.search).get('v')))) {
+  if (tries < 100 && (!$('ytd-masthead #end') || (onWatchPage && $('ytd-watch-flexy')?.getAttribute('video-id') !== new URLSearchParams(location.search).get('v')))) {
     setupTimer = setTimeout(setup, 50, tries + 1);
     return;
   }
@@ -233,7 +233,7 @@ function setup(tries = 0) {
   };
   const recommended = Object.assign(iconButton('related', 'Recommended videos', () => toggle('related', recommended)), { id: 'docent-recommended', type: 'button', ariaControls: 'related' });
   const chat = Object.assign(iconButton('chat', 'Live chat', () => toggle('chat', chat)), { id: 'docent-chat', type: 'button', ariaControls: 'chat' });
-  document.body.append(el('div', { id: 'docent-panels', role: 'group', ariaLabel: 'Video panels' }, chat, recommended));
+  $('ytd-masthead #end')?.prepend(el('div', { id: 'docent-panels', role: 'group', ariaLabel: 'Video panels' }, chat, recommended));
   const syncChat = () => {
     const data = chatData();
     chat.hidden = !data;
