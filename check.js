@@ -179,6 +179,16 @@ async function check() {
   assert.strictEqual(attributes.has('data-docent-home'), true);
   assert.strictEqual(created.filter(element => element.id === 'docent-rail').length, 1);
   assert.strictEqual(created.some(element => element.id === 'docent-recommended'), false, 'recommendations belong to watch pages');
+  // Docent's logo goes through YouTube's own logo, so Home opens without a page reload.
+  let logoClicks = 0;
+  page.querySelector = selector => selector === 'ytd-masthead' ? {} : selector === 'ytd-topbar-logo-renderer a' ? { click: () => logoClicks++ } : null;
+  const docentLogo = created.find(element => element.id === 'docent-logo');
+  let prevented = false;
+  docentLogo.onclick({ preventDefault: () => { prevented = true; } });
+  assert.strictEqual(logoClicks, 1);
+  assert.strictEqual(prevented, true, 'an in-app navigation replaces the page load');
+  docentLogo.onclick({ metaKey: true, preventDefault: () => assert.fail('a modified click keeps the link') });
+  assert.strictEqual(logoClicks, 1);
   setPage(false);
   assert.strictEqual(created.filter(element => 'docentNode' in element.dataset).length, 0);
   assert.strictEqual(attributes.has('data-docent-home'), false);

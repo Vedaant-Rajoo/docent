@@ -54,6 +54,15 @@ let restoreWatch = () => {};
 // The column picked on the watch page, so the next video (autoplay, a playlist) opens with it.
 let keptPanel;
 
+// YouTube's own logo opens Home inside the app, without reloading the page.
+// Modified clicks keep the link's browser behavior.
+const goHome = event => {
+  const youtubeLogo = $('ytd-topbar-logo-renderer a');
+  if (!youtubeLogo || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  event.preventDefault();
+  youtubeLogo.click();
+};
+
 let guide;
 
 // Links to the channels in the guide's subscriptions section, which YouTube orders by recent
@@ -161,7 +170,7 @@ function setup(tries = 0) {
   // Icon rail: YouTube's logo on top, the library, the subscriptions once the guide loads, then settings
   const channels = el('div', { id: 'docent-subscriptions', role: 'group', ariaLabel: 'Subscriptions' });
   const rail = el('nav', { id: 'docent-rail', ariaLabel: 'Library' },
-    iconLink('home', 'Home', '/'),
+    Object.assign(iconLink('home', 'Home', '/'), { onclick: goHome }),
     iconLink('watchLater', 'Watch later', '/playlist?list=WL'),
     iconLink('playlists', 'Playlists', '/feed/playlists'),
     iconLink('history', 'History', '/feed/history'),
@@ -169,7 +178,7 @@ function setup(tries = 0) {
     channels,
     iconButton('settings', 'Docent settings', () => document.dispatchEvent(new Event('docent-open-settings'))),
   );
-  document.body.append(el('a', { id: 'docent-logo', title: 'YouTube', ariaLabel: 'YouTube', href: '/' }, logo()), rail);
+  document.body.append(el('a', { id: 'docent-logo', title: 'YouTube', ariaLabel: 'YouTube', href: '/', onclick: goHome }, logo()), rail);
   // ponytail: one fetch per page load, so channels subscribed to since then show after a reload.
   guide ??= $('ytd-app')?.guideService?.fetchGuideData?.();
   guide?.then(data => {
