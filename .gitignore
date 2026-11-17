@@ -7,3 +7,6 @@
 *.pem
 *.zip
 /exa-results/
+node_modules/
+.chrome/
+.dev-profile/

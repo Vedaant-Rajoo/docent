@@ -1,0 +1,13 @@
+{
+  "name": "docent",
+  "private": true,
+  "scripts": {
+    "dev": "web-ext run --target chromium --chromium-binary \"$(browsers install chrome@stable --path .chrome --format {{path}})\" --chromium-profile .dev-profile --profile-create-if-missing --keep-profile-changes --start-url https://www.youtube.com --arg=--force-dark-mode",
+    "test": "node check.js"
+  },
+  "devDependencies": {
+    "@puppeteer/browsers": "^3.2.7",
+    "web-ext": "^10.8.0"
+  },
+  "packageManager": "pnpm@12.21.0"
+}

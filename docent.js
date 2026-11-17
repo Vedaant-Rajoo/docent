@@ -51,6 +51,17 @@ const iconLink = (name, label, href) => el('a', { className: 'docent-icon', titl
 let settings;
 let setupTimer;
 let restoreWatch = () => {};
+// The column picked on the watch page, so the next video (autoplay, a playlist) opens with it.
+let keptPanel;
+
+// YouTube's own logo opens Home inside the app, without reloading the page.
+// Modified clicks keep the link's browser behavior.
+const goHome = event => {
+  const youtubeLogo = $('ytd-topbar-logo-renderer a');
+  if (!youtubeLogo || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  event.preventDefault();
+  youtubeLogo.click();
+};
 
 let guide;
 
@@ -130,6 +141,7 @@ function setup(tries = 0) {
   // Dark theme only: YouTube's light-theme text colors do not suit this layout.
   const on = Boolean(settings?.enabled && root.hasAttribute('dark'));
   const wasOn = root.hasAttribute('data-docent');
+  keptPanel = onWatchPage ? root.dataset.docentPanel ?? keptPanel : undefined;
   document.querySelectorAll('[data-docent-node]').forEach(node => node.remove());
   root.toggleAttribute('data-docent', on);
   root.toggleAttribute('data-docent-watch', on && onWatchPage);
@@ -158,7 +170,7 @@ function setup(tries = 0) {
   // Icon rail: YouTube's logo on top, the library, the subscriptions once the guide loads, then settings
   const channels = el('div', { id: 'docent-subscriptions', role: 'group', ariaLabel: 'Subscriptions' });
   const rail = el('nav', { id: 'docent-rail', ariaLabel: 'Library' },
-    iconLink('home', 'Home', '/'),
+    Object.assign(iconLink('home', 'Home', '/'), { onclick: goHome }),
     iconLink('watchLater', 'Watch later', '/playlist?list=WL'),
     iconLink('playlists', 'Playlists', '/feed/playlists'),
     iconLink('history', 'History', '/feed/history'),
@@ -166,7 +178,7 @@ function setup(tries = 0) {
     channels,
     iconButton('settings', 'Docent settings', () => document.dispatchEvent(new Event('docent-open-settings'))),
   );
-  document.body.append(el('a', { id: 'docent-logo', title: 'YouTube', ariaLabel: 'YouTube', href: '/' }, logo()), rail);
+  document.body.append(el('a', { id: 'docent-logo', title: 'YouTube', ariaLabel: 'YouTube', href: '/', onclick: goHome }, logo()), rail);
   // ponytail: one fetch per page load, so channels subscribed to since then show after a reload.
   guide ??= $('ytd-app')?.guideService?.fetchGuideData?.();
   guide?.then(data => {
@@ -218,7 +230,7 @@ function setup(tries = 0) {
       if (watch.hasAttribute('theater') && !inFullscreen()) $('.ytp-size-button')?.click();
     });
   };
-  const toggle = (name, button) => {
+  const toggle = (name, button, focus = true) => {
     if (root.dataset.docentPanel === name) return close();
     const content = surface(name);
     if (name === 'chat' ? chat.hidden : !content) return;
@@ -229,7 +241,7 @@ function setup(tries = 0) {
     ));
     show(name);
     if (name === 'chat') expandChat();
-    if (content) $('h2, button, iframe', content)?.focus();
+    if (focus && content) $('h2, button, iframe', content)?.focus();
   };
   const recommended = Object.assign(iconButton('related', 'Recommended videos', () => toggle('related', recommended)), { id: 'docent-recommended', type: 'button', ariaControls: 'related' });
   const chat = Object.assign(iconButton('chat', 'Live chat', () => toggle('chat', chat)), { id: 'docent-chat', type: 'button', ariaControls: 'chat' });
@@ -345,6 +357,8 @@ function setup(tries = 0) {
     .filter(panel => panel.getAttribute('target-id') !== 'engagement-panel-ads').at(-1);
   syncChat();
   show(expanded ? 'native' : 'none', expanded);
+  // Reopen without focus: autoplay must not pull the keyboard from the player.
+  if (!expanded && ['related', 'playlist', 'chat'].includes(keptPanel)) toggle(keptPanel, null, false);
   reveal();
   updatePlayer();
 

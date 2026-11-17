@@ -179,6 +179,16 @@ async function check() {
   assert.strictEqual(attributes.has('data-docent-home'), true);
   assert.strictEqual(created.filter(element => element.id === 'docent-rail').length, 1);
   assert.strictEqual(created.some(element => element.id === 'docent-recommended'), false, 'recommendations belong to watch pages');
+  // Docent's logo goes through YouTube's own logo, so Home opens without a page reload.
+  let logoClicks = 0;
+  page.querySelector = selector => selector === 'ytd-masthead' ? {} : selector === 'ytd-topbar-logo-renderer a' ? { click: () => logoClicks++ } : null;
+  const docentLogo = created.find(element => element.id === 'docent-logo');
+  let prevented = false;
+  docentLogo.onclick({ preventDefault: () => { prevented = true; } });
+  assert.strictEqual(logoClicks, 1);
+  assert.strictEqual(prevented, true, 'an in-app navigation replaces the page load');
+  docentLogo.onclick({ metaKey: true, preventDefault: () => assert.fail('a modified click keeps the link') });
+  assert.strictEqual(logoClicks, 1);
   setPage(false);
   assert.strictEqual(created.filter(element => 'docentNode' in element.dataset).length, 0);
   assert.strictEqual(attributes.has('data-docent-home'), false);
@@ -575,8 +585,10 @@ async function check() {
   assert.strictEqual(page.documentElement.dataset.docentPanel, undefined, 'the previous panel is dropped while the next video loads');
   assert.match(fs.readFileSync(`${__dirname}/docent.css`, 'utf8'), /:not\(\[data-docent-panel\]\)[^{]*ytd-watch-flexy \{[^}]*--ytd-watch-flexy-sidebar-width: 0px/, 'no selected panel means no column');
   videoId = 'later-video';
+  const focusedBefore = page.activeElement;
   timers.shift()();
-  assert.strictEqual(page.documentElement.dataset.docentPanel, 'none');
+  assert.strictEqual(page.documentElement.dataset.docentPanel, 'related', 'the next video reopens the column the viewer had open');
+  assert.strictEqual(page.activeElement, focusedBefore, 'reopening on autoplay leaves focus alone');
   assert.strictEqual(timers.length, 0);
   notify(chapters);
   chatInfo = {};

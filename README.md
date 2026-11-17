@@ -64,6 +64,17 @@ Open settings from the gear at the bottom of Docent's rail, or right-click its t
 
 Treat bug reports as public. Remove account details, private video links, and personal information from reports and screenshots.
 
+## Develop
+
+With Node.js 26 and pnpm installed, run this from the repository:
+
+```sh
+pnpm install
+pnpm dev
+```
+
+`pnpm dev` downloads Chrome for Testing into `.chrome`, then opens YouTube in it with Docent loaded and YouTube in dark theme. It keeps the browser profile in `.dev-profile`, so sign in to YouTube there once and your subscriptions stay across runs. Saving a file reloads the extension; reload the YouTube tab to run the new content scripts.
+
 ## Check a change
 
 With Node.js 26 installed, run this from the repository:
