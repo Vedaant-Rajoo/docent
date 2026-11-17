@@ -51,6 +51,8 @@ const iconLink = (name, label, href) => el('a', { className: 'docent-icon', titl
 let settings;
 let setupTimer;
 let restoreWatch = () => {};
+// The column picked on the watch page, so the next video (autoplay, a playlist) opens with it.
+let keptPanel;
 
 let guide;
 
@@ -130,6 +132,7 @@ function setup(tries = 0) {
   // Dark theme only: YouTube's light-theme text colors do not suit this layout.
   const on = Boolean(settings?.enabled && root.hasAttribute('dark'));
   const wasOn = root.hasAttribute('data-docent');
+  keptPanel = onWatchPage ? root.dataset.docentPanel ?? keptPanel : undefined;
   document.querySelectorAll('[data-docent-node]').forEach(node => node.remove());
   root.toggleAttribute('data-docent', on);
   root.toggleAttribute('data-docent-watch', on && onWatchPage);
@@ -218,7 +221,7 @@ function setup(tries = 0) {
       if (watch.hasAttribute('theater') && !inFullscreen()) $('.ytp-size-button')?.click();
     });
   };
-  const toggle = (name, button) => {
+  const toggle = (name, button, focus = true) => {
     if (root.dataset.docentPanel === name) return close();
     const content = surface(name);
     if (name === 'chat' ? chat.hidden : !content) return;
@@ -229,7 +232,7 @@ function setup(tries = 0) {
     ));
     show(name);
     if (name === 'chat') expandChat();
-    if (content) $('h2, button, iframe', content)?.focus();
+    if (focus && content) $('h2, button, iframe', content)?.focus();
   };
   const recommended = Object.assign(iconButton('related', 'Recommended videos', () => toggle('related', recommended)), { id: 'docent-recommended', type: 'button', ariaControls: 'related' });
   const chat = Object.assign(iconButton('chat', 'Live chat', () => toggle('chat', chat)), { id: 'docent-chat', type: 'button', ariaControls: 'chat' });
@@ -345,6 +348,8 @@ function setup(tries = 0) {
     .filter(panel => panel.getAttribute('target-id') !== 'engagement-panel-ads').at(-1);
   syncChat();
   show(expanded ? 'native' : 'none', expanded);
+  // Reopen without focus: autoplay must not pull the keyboard from the player.
+  if (!expanded && ['related', 'playlist', 'chat'].includes(keptPanel)) toggle(keptPanel, null, false);
   reveal();
   updatePlayer();
 

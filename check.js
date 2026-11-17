@@ -575,8 +575,10 @@ async function check() {
   assert.strictEqual(page.documentElement.dataset.docentPanel, undefined, 'the previous panel is dropped while the next video loads');
   assert.match(fs.readFileSync(`${__dirname}/docent.css`, 'utf8'), /:not\(\[data-docent-panel\]\)[^{]*ytd-watch-flexy \{[^}]*--ytd-watch-flexy-sidebar-width: 0px/, 'no selected panel means no column');
   videoId = 'later-video';
+  const focusedBefore = page.activeElement;
   timers.shift()();
-  assert.strictEqual(page.documentElement.dataset.docentPanel, 'none');
+  assert.strictEqual(page.documentElement.dataset.docentPanel, 'related', 'the next video reopens the column the viewer had open');
+  assert.strictEqual(page.activeElement, focusedBefore, 'reopening on autoplay leaves focus alone');
   assert.strictEqual(timers.length, 0);
   notify(chapters);
   chatInfo = {};
