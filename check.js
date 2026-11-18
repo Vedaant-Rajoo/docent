@@ -6,7 +6,10 @@ const vm = require('node:vm');
 const { setImmediate } = require('node:timers/promises');
 
 const node = () => ({ dataset: {}, children: [], append(...children) {
-  for (const child of children) this.children.push(Object.assign(child, { parentNode: this, previousSibling: this.children.at(-1) }));
+  for (const child of children) {
+    if (this.children.length) this.children.at(-1).nextSibling = child;
+    this.children.push(Object.assign(child, { parentNode: this, previousSibling: this.children.at(-1) }));
+  }
 } });
 const { subscriptions } = vm.runInNewContext(`${fs.readFileSync(`${__dirname}/docent.js`, 'utf8')}\n({ subscriptions })`, {
   document: { createElement: node, addEventListener() {} },
@@ -95,10 +98,10 @@ async function check() {
   document.addEventListener('docent-settings', event => received.push(event.detail));
   vm.runInNewContext(fs.readFileSync(`${__dirname}/bridge.js`, 'utf8'), { chrome, document, CustomEvent, console });
   await setImmediate();
-  assert.deepStrictEqual(received.at(-1), { enabled: false, autoScroll: true, showDislike: false });
+  assert.deepStrictEqual(received.at(-1), { enabled: false, autoScroll: true, showDislike: false, cyclePlayerOptions: false });
   await local.set({ enabled: true, autoScroll: false, showDislike: false });
   await setImmediate();
-  assert.deepStrictEqual(received.at(-1), { enabled: true, autoScroll: false, showDislike: false });
+  assert.deepStrictEqual(received.at(-1), { enabled: true, autoScroll: false, showDislike: false, cyclePlayerOptions: false });
   document.dispatchEvent(new Event('docent-open-settings'));
   assert.strictEqual(optionsOpened, 1);
 
@@ -144,6 +147,8 @@ async function check() {
   let optionWrites = 0;
   page.createElement = tag => {
     const element = node();
+    element.tagName = tag.toUpperCase();
+    element.hidden = false;
     element.setAttribute = () => {};
     element.isConnected = true;
     element.checkVisibility = () => element.isConnected;
@@ -172,7 +177,7 @@ async function check() {
   page.querySelector = selector => selector === 'ytd-masthead' ? {} : null;
   page.querySelectorAll = selector => selector === '[data-docent-node]' ? created.filter(element => 'docentNode' in element.dataset) : [];
   main.location.pathname = '/';
-  const setPage = enabled => page.dispatchEvent(new CustomEvent('docent-settings', { detail: { enabled, autoScroll: true } }));
+  const setPage = (enabled, cyclePlayerOptions = false) => page.dispatchEvent(new CustomEvent('docent-settings', { detail: { enabled, autoScroll: true, cyclePlayerOptions } }));
   setPage(true);
   assert.strictEqual(attributes.has('data-docent'), true);
   assert.strictEqual(attributes.has('data-docent-watch'), false);
@@ -381,16 +386,83 @@ async function check() {
   player.preferred = 'hd2160';
   panelObserver.callback();
   assert.deepStrictEqual(shown(quality), ['720p', 'hd720', 'Video resolution: 720p'], 'a preference this video cannot play shows what plays');
+
+  // Cycling uses the same choices, refreshing stale player state before each activation.
+  const speedButton = speed.nextSibling, qualityButton = quality.nextSibling;
+  const setCycle = cyclePlayerOptions => page.dispatchEvent(new CustomEvent('docent-settings', { detail: { enabled: true, autoScroll: true, cyclePlayerOptions } }));
+  assert.strictEqual(speed.hidden, false);
+  assert.strictEqual(speedButton.hidden, true, 'existing installs keep dropdowns');
+  assert.strictEqual(speedButton.tagName, 'BUTTON', 'native buttons supply Enter and Space activation');
+  assert.strictEqual(speedButton.type, 'button');
+  page.activeElement = speed;
+  setCycle(true);
+  assert.strictEqual(created.find(element => element.id === 'docent-speed'), speed, 'switching mode keeps the player controls');
+  assert.strictEqual(speed.hidden, true);
+  assert.strictEqual(quality.hidden, true);
+  assert.strictEqual(speedButton.hidden, false);
+  assert.strictEqual(qualityButton.hidden, false);
+  assert.strictEqual(page.activeElement, speedButton, 'switching mode transfers focus from the hidden control');
+  speedButton.onclick({ detail: 0 });
+  assert.strictEqual(player.rate, 1.5, 'a custom rate advances to the next supported speed');
+  assert.deepStrictEqual(shown(speed), ['1.5×', '1.5', 'Playback speed: 1.5×']);
+  assert.strictEqual(speedButton.ariaLabel, 'Playback speed: 1.5×. Activate to cycle.');
+  assert.strictEqual(page.activeElement, speedButton, 'keyboard activation keeps focus for repeated cycling');
+  player.rates = [0.5, 1, 2];
+  player.rate = 2;
+  speedButton.onclick({ detail: 1 });
+  assert.strictEqual(player.rate, 0.5, 'cycling refreshes available rates and wraps from the current speed');
+  assert.strictEqual(page.activeElement, page.body, 'a pointer activation returns YouTube shortcuts');
+  player.rate = 1.05;
+  speedButton.onclick({ detail: 0 });
+  assert.strictEqual(player.rate, 2, 'an external custom speed is read even before an observer callback');
+  player.rates = [];
+  speedButton.onclick({ detail: 0 });
+  assert.strictEqual(player.rate, 2, 'a single speed remains safe to activate');
+  player.rates = [0.25, 0.5, 1, 1.5, 2];
+  player.preferred = 'hd1080';
+  qualityButton.onclick({ detail: 0 });
+  assert.strictEqual(player.preferred, 'hd720', 'cycling starts from the current preference without an observer callback');
+  qualityButton.onclick({ detail: 0 });
+  assert.strictEqual(player.preferred, 'auto');
+  assert.strictEqual(qualityButton.ariaLabel, 'Video resolution: Auto (720p). Activate to cycle.');
+  qualityButton.onclick({ detail: 0 });
+  assert.strictEqual(player.preferred, 'hd1080', 'Auto wraps to the first playable quality, skipping unavailable options');
+  const availableQualities = player.qualities;
+  player.qualities = [];
+  qualityButton.onclick({ detail: 0 });
+  assert.strictEqual(player.preferred, 'auto', 'an empty quality list still offers Auto');
+  assert.strictEqual(qualityButton.ariaLabel, 'Video resolution: Auto. Activate to cycle.');
+  player.qualities = availableQualities;
+  page.activeElement = qualityButton;
+  setCycle(false);
+  assert.strictEqual(quality.hidden, false);
+  assert.strictEqual(qualityButton.hidden, true);
+  assert.strictEqual(page.activeElement, quality, 'turning cycling off transfers keyboard focus back to the dropdown');
+  quality.value = 'hd720';
+  quality.onchange();
+  assert.strictEqual(player.preferred, 'hd720', 'the dropdown still selects normally after cycling is disabled');
+  page.activeElement = trigger;
+  setCycle('true');
+  assert.strictEqual(speed.hidden, false, 'only boolean true enables cycling');
+  assert.strictEqual(page.activeElement, trigger, 'a settings change never takes focus from elsewhere');
+  setCycle(true);
   // Docent's writes are page mutations too, so unchanged state must not write again.
   let textWrites = 0;
   for (const label of [speed.previousSibling, quality.previousSibling]) {
     let text = label.textContent;
     Object.defineProperty(label, 'textContent', { get: () => text, set: value => { text = value; textWrites++; } });
   }
+  for (const control of [speed, quality, speedButton, qualityButton]) {
+    for (const key of ['hidden', 'ariaLabel']) {
+      let current = control[key];
+      Object.defineProperty(control, key, { get: () => current, set: value => { current = value; textWrites++; } });
+    }
+  }
   const optionsBefore = optionWrites;
   panelObserver.callback();
   panelObserver.callback();
   assert.strictEqual(optionWrites + textWrites, optionsBefore, 'an unchanged player must not wake the observer again');
+  setCycle(false);
   const pip = created.find(element => element.className === 'ytp-button docent-pip');
   assert.strictEqual(pip.ariaLabel, 'Picture-in-picture');
   pip.onclick();
@@ -593,6 +665,10 @@ async function check() {
   notify(chapters);
   chatInfo = {};
   observers.at(-1).callback();
+  setCycle(true);
+  assert.strictEqual(page.documentElement.dataset.docentPanel, 'native', 'changing picker mode preserves the open panel');
+  page.dispatchEvent(new Event('yt-navigate-finish'));
+  assert.strictEqual(created.find(element => element.id === 'docent-speed').hidden, true, 'navigation keeps cycle mode');
   assert.strictEqual(cards[0].hasAttribute('data-docent-chat-entry'), true);
   assert.deepStrictEqual(bar(), fullBar, 'setup reruns and navigation leave one of each player control');
   assert.strictEqual(player.listeners.length, 1, 'and one quality listener on the player');
@@ -603,7 +679,10 @@ async function check() {
   assert.deepStrictEqual(replaced.controls.children.map(child => child.className), ['ytp-autonav-toggle', 'ytp-subtitles-button', 'ytp-settings-button']);
   assert.strictEqual(player.listeners.length, 1);
   assert.deepStrictEqual(shown(created.find(element => element.id === 'docent-quality')), ['1080p', 'auto', 'Video resolution: Auto (1080p)'], 'the new player\'s state, not the old one\'s');
-  setPage(false);
+  created.find(element => element.id === 'docent-speed').nextSibling.onclick({ detail: 0 });
+  assert.strictEqual(player.rate, 1.5, 'cycle buttons target the replacement player');
+  assert.strictEqual(replaced.rate, 2, 'the previous player stays untouched');
+  setPage(false, true);
   assert.strictEqual(chapters.getAttribute('visibility'), 'ENGAGEMENT_PANEL_VISIBILITY_EXPANDED', 'disabling must not rewrite native visibility');
   notify(other);
   assert.strictEqual(page.documentElement.dataset.docentPanel, undefined, 'disabled layout ignores native events');
@@ -611,12 +690,13 @@ async function check() {
   assert.strictEqual(observers.at(-1).connected, false);
   assert.strictEqual(cards.some(card => card.hasAttribute('data-docent-chat-entry')), false);
   assert.deepStrictEqual(bar(), ['ytp-autonav-toggle', 'ytp-subtitles-button', 'ytp-settings-button'], 'disabling leaves YouTube\'s controls as they were');
-  setPage(true);
+  setPage(true, true);
   assert.deepStrictEqual(bar(), fullBar, 're-enabling adds each control once');
   assert.strictEqual(player.listeners.length, 1);
+  assert.strictEqual(created.find(element => element.id === 'docent-speed').hidden, true, 're-enabling preserves cycling');
 
   // The options page saves changes and follows a toggle made from another extension surface.
-  const inputs = Object.fromEntries(['enabled', 'autoScroll', 'showDislike'].map(id => [id, { id }]));
+  const inputs = Object.fromEntries(['enabled', 'autoScroll', 'showDislike', 'cyclePlayerOptions'].map(id => [id, { id }]));
   let change;
   inputs.controls = { addEventListener: (_, listener) => { change = listener; } };
   inputs.preferences = {};
@@ -626,10 +706,19 @@ async function check() {
   assert.strictEqual(inputs.enabled.checked, true);
   assert.strictEqual(inputs.autoScroll.checked, false);
   assert.strictEqual(inputs.showDislike.checked, false, 'Dislike stays hidden by default');
+  assert.strictEqual(inputs.cyclePlayerOptions.checked, false, 'cycling stays off by default');
   inputs.autoScroll.checked = true;
   await change({ target: inputs.autoScroll });
   assert.strictEqual(values.autoScroll, true);
   assert.strictEqual(inputs.status.textContent, 'Saved');
+  inputs.cyclePlayerOptions.checked = true;
+  await change({ target: inputs.cyclePlayerOptions });
+  await setImmediate();
+  assert.strictEqual(values.cyclePlayerOptions, true, 'the options page persists cycling');
+  assert.strictEqual(received.at(-1).cyclePlayerOptions, true, 'the bridge forwards cycling changes');
+  await local.set({ cyclePlayerOptions: false });
+  await setImmediate();
+  assert.strictEqual(inputs.cyclePlayerOptions.checked, false, 'the options page follows external changes');
   await local.set({ enabled: false });
   await setImmediate();
   assert.strictEqual(inputs.enabled.checked, false);

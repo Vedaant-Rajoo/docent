@@ -50,6 +50,8 @@ Pin Docent from Chrome's Extensions menu. Click its toolbar icon to turn the lay
 
 Open settings from the gear at the bottom of Docent's rail, or right-click its toolbar icon and choose Options. Settings open in a separate tab. You can turn Docent off, disable transcript auto-scroll, or show YouTube's Dislike button there. Changes save locally in your Chrome profile.
 
+Turn on **Cycle player options** to advance speed or resolution with each click, wrapping from the last option to the first. Speed runs from slowest to fastest; resolution follows the dropdown order, including Auto. Keyboard users can focus either button and press Enter or Space. The setting is off by default, keeping the dropdowns, and changes apply to open YouTube tabs immediately.
+
 ## Known limitations
 
 - The alpha focuses on YouTube's desktop home and watch pages. Mobile YouTube, embedded players, and YouTube Music are outside its scope.

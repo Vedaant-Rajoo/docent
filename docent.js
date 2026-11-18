@@ -84,19 +84,25 @@ const subscriptions = data => {
   });
 };
 
-// The player's speed and resolution pickers: a native select laid over the value it shows, so the
-// bar reads "1×" or "1080p" while the browser's own list offers the choices.
+// A native select or cycle button covers the value shown in the player bar.
 const picker = (id, label, choose) => {
   let pointer = false;
+  const select = el('select', { id, ariaLabel: label, onpointerdown() { pointer = true; }, onchange() {
+    choose($('#movie_player'), this.value);
+    syncPlayer();
+    // A mouse pick hands the keyboard back to YouTube's shortcuts. On Windows and Linux each arrow press
+    // on a closed select is a change, so blurring then would send the next arrow to the player.
+    if (pointer) this.blur();
+    pointer = false;
+  }, onblur() { pointer = false; } });
   return el('span', { className: 'docent-picker' },
-    el('span', { ariaHidden: 'true' }),
-    el('select', { id, ariaLabel: label, onpointerdown() { pointer = true; }, onchange() {
-      choose($('#movie_player'), this.value);
+    el('span', { ariaHidden: 'true' }), select,
+    el('button', { type: 'button', hidden: true, onclick(event) {
       syncPlayer();
-      // A mouse pick hands the keyboard back to YouTube's shortcuts. On Windows and Linux each arrow press
-      // on a closed select is a change, so blurring then would send the next arrow to the player.
-      if (pointer) this.blur();
-      pointer = false;
+      const next = select.options[(select.selectedIndex + 1) % select.options.length];
+      if (next) choose($('#movie_player'), next.value);
+      syncPlayer();
+      if (event.detail) this.blur();
     } }));
 };
 // Writes only what changed. The watch page's observer runs this, and every write would run it again.
@@ -110,6 +116,16 @@ const fillPicker = (select, choices, value, text) => {
   text ??= chosen;
   if (select.previousSibling.textContent !== text) select.previousSibling.textContent = text;
   if (select.parentNode.title !== title) select.parentNode.title = title;
+  const button = select.nextSibling;
+  const action = `${title}. Activate to cycle.`;
+  if (button.ariaLabel !== action) button.ariaLabel = action;
+  const cycle = settings?.cyclePlayerOptions === true;
+  if (select.hidden !== cycle) {
+    const focused = document.activeElement === (cycle ? select : button);
+    select.hidden = cycle;
+    button.hidden = !cycle;
+    if (focused) (cycle ? button : select).focus();
+  }
 };
 
 // Shows the choices the player offers for this video and what it plays. YouTube lists the higher
@@ -377,6 +393,7 @@ document.addEventListener('docent-settings', ({ detail: next }) => {
   // docent.css shows YouTube's Dislike button for this attribute, so nothing needs rebuilding.
   document.documentElement.toggleAttribute('data-docent-dislike', next.showDislike === true);
   if (changed) setup();
+  else syncPlayer();
 });
 
 // ratechange doesn't bubble, but a capturing listener on document still sees it.

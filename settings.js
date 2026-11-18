@@ -1,4 +1,4 @@
-const defaults = { enabled: true, autoScroll: true, showDislike: false };
+const defaults = { enabled: true, autoScroll: true, showDislike: false, cyclePlayerOptions: false };
 const controls = document.getElementById('controls');
 const preferences = document.getElementById('preferences');
 const status = document.getElementById('status');
