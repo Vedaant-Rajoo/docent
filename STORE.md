@@ -10,7 +10,7 @@ Docent gives desktop YouTube a minimal layout for browsing and watching videos. 
 
 ### Storage
 
-Docent uses `chrome.storage.local` to remember whether its layout is enabled, whether transcript auto-scroll is enabled, and whether YouTube's Dislike button is shown. These preferences apply across YouTube tabs in the same Chrome profile and remain after the browser restarts. Page content is not saved in extension storage.
+Docent uses `chrome.storage.local` to remember whether its layout is enabled, whether transcript auto-scroll is enabled, whether YouTube's Dislike button is shown, and whether player speed and resolution controls cycle through options on click. These preferences apply across YouTube tabs in the same Chrome profile and remain after the browser restarts. Page content is not saved in extension storage.
 
 ### YouTube site access
 
@@ -40,7 +40,7 @@ Google requires disclosure of data handled locally, even when it is never sent t
 | User activity | Yes | Page-control clicks, the search keyboard shortcut, player events, focus, and transcript position are handled in the tab to operate the interface. Docent does not log clicks or keystrokes. |
 | Website content | Yes | YouTube guide data, channel image URLs, the watch page's data for live chat availability, native panel structure, transcript row state, and player information are used to display the interface. No copy is saved in extension storage. |
 
-The extension saves only its enabled, transcript auto-scroll, and Dislike button preferences in `chrome.storage.local`. They are not synced by Docent. Page data is used in tab memory. Cached guide data can remain until the tab is closed or fully reloaded.
+The extension saves only its enabled, transcript auto-scroll, Dislike button, and cycle player options preferences in `chrome.storage.local`. They are not synced by Docent. Page data is used in tab memory. Cached guide data can remain until the tab is closed or fully reloaded.
 
 Requests to YouTube's guide service and channel image URLs go through the existing browser session. Interactions with native YouTube features continue to use YouTube's services. The extension does not send a separate copy of page data or preferences to its maintainer.
 
@@ -64,7 +64,7 @@ Support: <https://github.com/Vedaant-Rajoo/docent/issues>
 
 1. Open desktop `https://www.youtube.com/` and choose YouTube's dark theme. Docent stays inactive in the light theme.
 2. Open a video. Use its native chapter or transcript control when available. The selected component occupies the shared column. The Recommended button opens video recommendations; a live stream or a video with chat replay adds a chat button beside it. The player bar shows speed and resolution pickers and a picture-in-picture button.
-3. Open Docent settings from the gear in its rail. Change transcript auto-scroll or Show Dislike, then reload YouTube to confirm the setting is saved.
+3. Open Docent settings from the gear in its rail. Change transcript auto-scroll, Show Dislike, or Cycle player options, then reload YouTube to confirm the setting is saved.
 4. Click Docent's Chrome toolbar button to disable or enable its layout across open YouTube tabs.
 
 Basic layout testing does not need a Docent account. Subscriptions need a YouTube account; chat, transcripts, chapters, and Ask depend on what YouTube provides for the account and video. Docent does not provide its own AI service.

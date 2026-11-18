@@ -188,11 +188,12 @@ html[data-docent] {
     & .ytp-settings-button::after { display: none; }
     & .ytp-fullscreen-button { --docent-glyph: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'><path d='M8 4H4v4M16 4h4v4M20 16v4h-4M8 20H4v-4'/></svg>"); }
     &.ytp-fullscreen .ytp-fullscreen-button { --docent-glyph: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'><path d='M4 8h4V4M16 4v4h4M20 16h-4v4M8 20v-4H4'/></svg>"); }
-    /* Speed and resolution are text, sized like YouTube's time display. Their select covers them. */
+    /* Speed and resolution are text, sized like YouTube's time display. Their control covers them. */
     & .docent-picker { position: relative; flex: none; display: flex; align-items: center; height: 40px; margin: auto 0; padding: 0 12px; border-radius: 8px; color: #fff; font-size: 14px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
     /* The hover YouTube gives .ytp-button::before beside it. */
     & .docent-picker:hover { background: rgba(255, 255, 255, .1); }
-    & .docent-picker select { position: absolute; inset: 0; opacity: 0; cursor: pointer; color-scheme: dark; }
+    & .docent-picker :is(select, button) { position: absolute; inset: 0; opacity: 0; cursor: pointer; color-scheme: dark; }
+    & .docent-picker [hidden] { display: none; }
   }
 
   /* Buttons under the video. YouTube's menu code re-measures this row on resize and moves Save and

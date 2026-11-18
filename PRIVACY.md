@@ -2,7 +2,7 @@
 
 Docent for YouTube is maintained by Vedaant Rajoo.
 
-Last updated: October 19, 2026
+Last updated: November 18, 2026
 
 Docent changes the layout of desktop YouTube. It uses information in your YouTube tab to display navigation, manage native panels, and provide playback controls. The extension has no developer-operated server or analytics service.
 
@@ -18,11 +18,12 @@ Comments, live chat, and Ask are YouTube's own components. Messages and question
 
 ## Saved settings
 
-Docent saves three preferences in `chrome.storage.local`:
+Docent saves these preferences in `chrome.storage.local`:
 
 - Whether Docent is enabled.
 - Whether transcript auto-scroll is enabled.
 - Whether YouTube's Dislike button is shown.
+- Whether player speed and resolution controls cycle through options on click.
 
 These preferences apply across YouTube tabs in the same Chrome profile. They remain after a browser restart. Docent does not use Chrome's sync storage or send these preferences to its maintainer.
 

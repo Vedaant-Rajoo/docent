@@ -1,5 +1,5 @@
 // Only this isolated-world script has extension APIs. The page receives only a copy of the settings.
-const refresh = () => chrome.storage.local.get({ enabled: true, autoScroll: true, showDislike: false })
+const refresh = () => chrome.storage.local.get({ enabled: true, autoScroll: true, showDislike: false, cyclePlayerOptions: false })
   .then(settings => document.dispatchEvent(new CustomEvent('docent-settings', { detail: settings })))
   .catch(console.error);
 chrome.storage.local.onChanged.addListener(refresh);
