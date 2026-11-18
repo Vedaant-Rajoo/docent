@@ -90,7 +90,8 @@ const picker = (id, label, choose) => {
   const select = el('select', { id, ariaLabel: label, onpointerdown() { pointer = true; }, onchange() {
     choose($('#movie_player'), this.value);
     syncPlayer();
-    // A mouse pick returns YouTube's shortcuts; keyboard changes keep focus for the next arrow press.
+    // A mouse pick hands the keyboard back to YouTube's shortcuts. On Windows and Linux each arrow press
+    // on a closed select is a change, so blurring then would send the next arrow to the player.
     if (pointer) this.blur();
     pointer = false;
   }, onblur() { pointer = false; } });
